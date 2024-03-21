@@ -1,0 +1,20 @@
+{
+  "name": "stock_sync",
+  "version": "1.0.0",
+  "description": "",
+  "main": "woocommerce_order_file_uploader.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "chromedriver": "^122.0.4"
+  },
+  "dependencies": {
+    "cron": "^3.1.6",
+    "mongodb": "^6.5.0",
+    "node-schedule": "^2.1.1",
+    "selenium-webdriver": "^4.18.1"
+  }
+}

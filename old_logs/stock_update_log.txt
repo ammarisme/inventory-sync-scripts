@@ -1,0 +1,6 @@
+Stock update,  25364, , 0
+Stock update,  25318, , 0
+Stock update,  25357, , 76
+Stock update,  25318, , 58
+Stock update,  25209, , 240
+Stock update,  25131, , 1
