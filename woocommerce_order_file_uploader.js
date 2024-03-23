@@ -270,7 +270,7 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
         if (elements.length > 0) {
           console.log('Alert element exists');
           //record error in mongo
-          if(invoice_number.indexOf("CAT")> 0){
+          if(invoice_number.indexOf("CAT")== 0){
           await createOrderNote(order_id, `Unable to auto generate invoice.`)
           await updateOrderStatus(order_id, "invoice-pending")
           }
@@ -304,7 +304,7 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
             status : 1,
             invoice_data : order
           })
-          if(invoice_number.indexOf("CAT")> 0){
+          if(invoice_number.indexOf("CAT")==   0){
         await createOrderNote(order_id, `Invoice generated - ${invoice_number}`)
                   await updateOrderStatus(order_id, "invoiced")
 
