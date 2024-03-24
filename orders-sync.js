@@ -1,7 +1,7 @@
 const { By } = require('selenium-webdriver');
 const {  getCollectionBy, upsertDocument } = require('./mongo_functions.js');
 const { loginStoreMate, donwloadStock, getChromeDriver } = require('./selenium_functions.js');
-const { getProcessingOrders, getScheduledWoocommerceOrders } = require('./woocommerce_functions.js')
+const { getProcessingOrders, getScheduledWoocommerceOrders } = require('./services/woocommerce_functions.js')
 const { log, generateRandomNumberString } = require('./common/utils.js')
 const {readCSV, convertToCSV, convertDarazToCSV} = require('./services/files.js')
 const {processFiles} = require('./services/order_processing.js');

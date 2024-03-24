@@ -1,7 +1,7 @@
 
 const axios = require('axios');
-const { getCollectionBy, insertDocument, upsertDocument, updateDocument } = require('./mongo_functions');
-const { WOOCOMMERCE_ORDER_REPROCESS_SCHEDULED } = require('./statuses');
+const { getCollectionBy, insertDocument, upsertDocument, updateDocument } = require('../mongo_functions');
+const { WOOCOMMERCE_ORDER_REPROCESS_SCHEDULED } = require('../statuses');
 
 
 async function getProcessingOrders() {

@@ -41,7 +41,7 @@ async function main() {
   for(key in products){
     const  product = products[key];
     const sku_in_stock = '"'+product["sku"]+'"';
-    const logfilename = `stock_update_log_${run_id}.csv`;
+    const logfilename = `./logs/stock_update_log_${run_id}.csv`;
 
     const website_stock = !product["stock_quantity"] ?0 : product["stock_quantity"];
     const catlitter_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Catlitter"]

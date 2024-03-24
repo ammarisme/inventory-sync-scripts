@@ -1,7 +1,7 @@
 const {By} = require('selenium-webdriver');
 const { Select } = require('selenium-webdriver');
 const fs = require('fs');
-const {createOrderNote, updateOrderStatus} = require('../woocommerce_functions.js')
+const {createOrderNote, updateOrderStatus} = require('./woocommerce_functions.js')
 const {upsertDocument} = require('../mongo_functions.js');
 
 
