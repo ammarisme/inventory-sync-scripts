@@ -1,4 +1,7 @@
+
 const axios = require('axios');
+const { getCollectionBy, insertDocument, upsertDocument, updateDocument } = require('./mongo_functions');
+const { WOOCOMMERCE_ORDER_REPROCESS_SCHEDULED } = require('./statuses');
 
 
 async function getProcessingOrders() {
@@ -74,7 +77,34 @@ async function getProcessingOrders() {
     }
   }
   
+  
+async function getScheduledWoocommerceOrders() {
+  let woo_orders = []
+  db_invoices = await getCollectionBy("invoices", { status: WOOCOMMERCE_ORDER_REPROCESS_SCHEDULED })
+  for (i = 0; i < db_invoices.length; i++) {
+      let order = db_invoices[i]
+      if (order.invoice_number.indexOf("CAT") == -1) {
+          continue
+      }
+      while (true) {
+          try {
+              const url = `https://catlitter.lk/wp-json/wc/v3/orders/${order.source_order_number}`;
+              const headers = {
+                  Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',
+              };
+
+              const response = await axios.get(url, { headers });
+              woo_orders.push(response.data)
+              break
+          } catch (error) {
+              throw new Error(`Failed to call API: ${error.message}`);
+          }
+      }
+  }
+
+  return woo_orders
+}
 
 module.exports = {
-    getProcessingOrders, createOrderNote, updateOrderStatus, getProduct
+    getProcessingOrders, createOrderNote, updateOrderStatus, getProduct, getScheduledWoocommerceOrders
 }

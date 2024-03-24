@@ -394,7 +394,11 @@ function readCSV(filePath){
 
       const rowData = {};
       header.forEach((col, index) => {
+        if(col=='"SKU"'){
+          rowData[col.trim().replace(/"/g, '')] = row[index].trim();  
+        }else{
         rowData[col.trim().replace(/"/g, '')] = row[index].trim().replace(/"/g, '');  
+        }
       });
       groupedData[key] = rowData;
   });

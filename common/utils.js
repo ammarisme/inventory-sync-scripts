@@ -1,4 +1,10 @@
 
+
+function log(message) {
+console.log("log:"+message)
+}
+
+
 function generateRandomNumberString(length = 5) {
     // Create an array of digits (0-9)
     const digits = '0123456789';
@@ -11,11 +17,7 @@ function generateRandomNumberString(length = 5) {
   
     return result;
   }
-  
-  function log(str){
-    console.log('log: ' + str)
-    }
 
-module.exports = {
-    generateRandomNumberString, log
-}
+  module.exports =  {
+    log, generateRandomNumberString
+  }

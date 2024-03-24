@@ -2,7 +2,8 @@ const { Builder, By, Key, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 const { Select } = require('selenium-webdriver');
 const fs = require('fs');
-const {log} = require('./util_functions.js')
+const {log} = require('./common/utils.js')
+
 
 
 function getChromeDriver(headeless){

@@ -4,8 +4,9 @@ const fs = require('fs');
 const axios = require('axios');
 const {insertDocument, updateDocument, getCollectionBy, upsertDocument} = require('./mongo_functions.js');
 const {loginStoreMate, donwloadStock, getChromeDriver} = require('./selenium_functions.js');
-const {getProcessingOrders, createOrderNote, updateOrderStatus, getProduct} = require('./woocommerce_functions.js')
-const {log, generateRandomNumberString} = require('./util_functions.js')
+const {getProcessingOrders, createOrderNote, updateOrderStatus} = require('./woocommerce_functions.js')
+const {log, generateRandomNumberString} = require('./common/utils.js')
+
 
 class Sale {
   customer_mobile
