@@ -6,6 +6,7 @@ const axios = require('axios');
 const { url } = require('inspector');
 const nodeSchedule = require('node-schedule');
 const {insertDocument, updateDocument, getCollectionBy, upsertDocument} = require('./mongo_functions.js');
+const { availableParallelism } = require('os');
 
 async function main() {
   let run_id =  generateRandomNumberString();
@@ -17,7 +18,6 @@ async function main() {
   // chromeOptions.addArguments("--window-size=1920,1080")
   // chromeOptions.addArguments("--start-maximized")
   // chromeOptions.addArguments('--download-directory="C:\\Users\\Ammar Ameerdeen\\Downloads"');
-
 
   const driver = new Builder()
     .forBrowser('chrome')
@@ -33,7 +33,17 @@ async function main() {
   await driver.quit();
 
   available_stock = readCSV(`C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)  
-
+  // for(SKU in available_stock){
+  //   while(true){
+  //   upsertDocument("inventory",{
+  //     sku: SKU,
+  //   },
+  //   available_stock[SKU]
+  //   );
+  //   break
+  // }
+  // }
+  // return
   let total_products = 0
   let total_updated_products = 0
   //download the product stock from woocommerce
@@ -146,6 +156,8 @@ async function main() {
     updated_products : total_updated_products,
     total_products : total_products
   });
+
+  
   log("completed")
 }
 function isNumber(string) {
@@ -403,23 +415,8 @@ function readCSV(filePath){
       groupedData[key] = rowData;
   });
 
-  // fs.unlink(filePath);
-  // console.log(`File ${filePath} deleted successfully!`);
-  
   return groupedData;
 }
-
-
-
-
-// function runJob() {
-//   console.log("start : runs every 21:00");
-//   nodeSchedule.scheduleJob('* 8 * * *', function () { 
-//     getCurrentTime()
-//     main()
-//   });
-// }
-
 
 function runJob() {
   const schedule = '30 */2 * * *'

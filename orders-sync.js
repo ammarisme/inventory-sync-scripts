@@ -6,6 +6,7 @@ const { log, generateRandomNumberString } = require('./common/utils.js')
 const {readCSV, convertToCSV, convertDarazToCSV} = require('./services/files.js')
 const {processFiles} = require('./services/order_processing.js');
 const { UPLOADED_ORDER_NEW, UPLOADED_ORDER_REPROCESS_SCHEDULED } = require('./statuses.js');
+const nodeSchedule = require('node-schedule');
 
 class Sale {
     customer_mobile
@@ -54,6 +55,7 @@ try {
     }
 
     let processing_orders;
+    log(`start processing: ${type}`)
     switch (type) {
         case "scheduled_wooorders":
             processing_orders = await getScheduledWoocommerceOrders()
@@ -106,4 +108,21 @@ try {
 }
 }
 
-entry_function("scheduled_wooorders")
+function runJob() {
+    const schedule = '30 */6 * * *'
+    console.log(`start : run schedule ${schedule}`)
+    nodeSchedule.scheduleJob(schedule, function () { 
+      try{
+      getCurrentTime()
+      entry_function("new_wooorders")
+      entry_function("scheduled_wooorders")
+    }catch(error){
+        log(error)
+        log("---------------------------------------------------------------")
+      }
+    })
+  }
+
+entry_function("new_wooorders")
+runJob()
+

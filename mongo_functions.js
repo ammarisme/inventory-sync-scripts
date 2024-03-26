@@ -1,3 +1,5 @@
+const { sleep } = require('./common/utils');
+
 const MongoClient = require('mongodb').MongoClient;
 
 var mongo_url = 'mongodb://abameerdeen:sajahafeel2216@ec2-13-234-20-8.ap-south-1.compute.amazonaws.com:27017'
@@ -67,8 +69,10 @@ async function  getCollection(collection_name) {
   }
   
   async function upsertDocument(collection_name, filter, document) {
+    let client;
+    while(true){
     try {
-      const client = await MongoClient.connect(mongo_url);
+      client = await MongoClient.connect(mongo_url);
       const db = client.db('catlitter');
 
       const currentDate = new Date();
@@ -88,10 +92,13 @@ async function  getCollection(collection_name) {
       }
   
       client.close();
+      break
     } catch (err) {
       console.error(err);
+      await sleep(2)
       // Handle upsert error with appropriate response
     }
+  }
   }
 
   async function getCollectionBy(collection_name,filter) {

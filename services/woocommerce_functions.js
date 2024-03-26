@@ -7,7 +7,7 @@ const { WOOCOMMERCE_ORDER_REPROCESS_SCHEDULED } = require('../statuses');
 async function getProcessingOrders() {
     while (true) {
       try {
-        const url = 'https://catlitter.lk/wp-json/wc/v3/orders?status=init-test&page=1&per_page=100';
+        const url = 'https://catlitter.lk/wp-json/wc/v3/orders?status=processing&page=1&per_page=100';
         const headers = {
           Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',
         };

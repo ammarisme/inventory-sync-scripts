@@ -18,6 +18,10 @@ function generateRandomNumberString(length = 5) {
     return result;
   }
 
+  async function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms*1000));
+  }
+
   module.exports =  {
-    log, generateRandomNumberString
+    log, generateRandomNumberString,sleep
   }

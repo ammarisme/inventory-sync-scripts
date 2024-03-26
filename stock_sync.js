@@ -1,125 +1,167 @@
-const { Builder, By, Key, until } = require('selenium-webdriver')
-const chrome = require('selenium-webdriver/chrome')
-const { Select } = require('selenium-webdriver')
-const fs = require('fs')
-const axios = require('axios')
-const { url } = require('inspector')
-const nodeSchedule = require('node-schedule')
-const MongoClient = require('mongodb').MongoClient
-
-
+const { Builder, By, Key, until } = require('selenium-webdriver');
+const chrome = require('selenium-webdriver/chrome');
+const { Select } = require('selenium-webdriver');
+const fs = require('fs');
+const axios = require('axios');
+const { url } = require('inspector');
+const nodeSchedule = require('node-schedule');
+const {insertDocument, updateDocument, getCollectionBy, upsertDocument} = require('./mongo_functions.js');
+const { availableParallelism } = require('os');
+const { sleep } = require('./common/utils.js');
 
 async function main() {
-  let run_id =  generateRandomNumberString()
-  console.log(`run id ${run_id}`)
+  let run_id =  generateRandomNumberString();
+  log(`run id ${run_id}`)
+
   // Initiate storemate in selenium
-  const chromeOptions = new chrome.Options()
-  // chromeOptions.addArguments('--headless')
+  const chromeOptions = new chrome.Options();
+  // chromeOptions.addArguments('--headless');
   // chromeOptions.addArguments("--window-size=1920,1080")
   // chromeOptions.addArguments("--start-maximized")
-  // chromeOptions.addArguments('--download-directory="C:\\Users\\Ammar Ameerdeen\\Downloads"')
-
+  // chromeOptions.addArguments('--download-directory="C:\\Users\\Ammar Ameerdeen\\Downloads"');
 
   const driver = new Builder()
     .forBrowser('chrome')
     .setChromeOptions(chromeOptions)
-    .build()
+    .build();
 
-//  // Login to storemate
+ // Login to storemate
   log("initiating storemate automation")
   await login(driver)
 
-
   //download the stock report for catlitter.lk
   await donwloadStock(driver, run_id)
-  await driver.quit()
+  await driver.quit();
 
   available_stock = readCSV(`C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)
-  previous_stock = readCSV(`C:\\Users\\Ammar Ameerdeen\\Downloads\\latest_stock.csv`)
-  let stock_changes = get_stock_changes(available_stock, previous_stock)
+ 
+  let total_products = 0
+  let total_updated_products = 0
+  //download the product stock from woocommerce
+  let products = await fetchProductsFromWoocommerce();
+  for(key in products){
+    const  product = products[key];
+    const sku_in_stock = '"'+product["sku"]+'"';
+    const logfilename = `./logs/stock_update_log_${run_id}.csv`;
 
-  //replace latest stock with the latest stock
-  fs.unlinkSync(`C:\\Users\\Ammar Ameerdeen\\Downloads\\latest_stock.csv`)
-  fs.renameSync(`C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`, `C:\\Users\\Ammar Ameerdeen\\Downloads\\latest_stock.csv`)
+    const website_stock = !product["stock_quantity"] ?0 : product["stock_quantity"];
+    const catlitter_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Catlitter"]
+    const wh_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Warehouse"]
 
-  if(stock_changes.length == 0){
-    log("No updates")
-    return;
-  }
-  let products_stockchanges = await fetchProductsFromWoocommerce(stock_changes)
-  const logfilename = `stock_update_log_${run_id}.csv`
+    let latest_stock = Number(catlitter_stock) + Number(wh_stock);
+    if((product.type == "simple" || product.type == "variation") &&  available_stock[sku_in_stock] && product["sku"] > 0 
+      && (website_stock != latest_stock)){
+      switch (product.type) {
+        case "variation":
+          await UpdateStockOfProductVariation(product.parent_id, product.id, latest_stock)
 
-  //loop through all the products for which there has been a change and update woocommerce stocks.
-  for(key in products_stockchanges["stock_changes"]){
-    let product_stock = products_stockchanges["stock_changes"][key]
-    let product
-    if(products_stockchanges["stock_changes"][key].Type == "variable"){
-      product = products_stockchanges["products"].find(p => p.id ==  products_stockchanges["stock_changes"][key].Id)
-    }else{
-      product = products_stockchanges["products"].find(p => p.sku ==  products_stockchanges["stock_changes"][key].SKU)
+          fs.appendFileSync(logfilename, generateLogMessage(
+            "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
+          ), (err) => {
+            if (err) throw err;
+            log('Stock update operation logged successfully!');
+          });
+          total_updated_products++
+          continue
+        case "simple":
+          await UpdateStockOfProduct(product.id, latest_stock)
+
+          fs.appendFileSync(logfilename, generateLogMessage(
+            "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
+          ), (err) => {
+            if (err) throw err;
+            log('Stock update operation logged successfully!');
+          });
+          total_updated_products++
+          continue
+        default:
+          fs.appendFileSync(logfilename, generateLogMessage(
+            "No Update", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
+          ), (err) => {
+            if (err) throw err;
+            log('No update!');
+          });
+          continue
+      }
+    } else if(product.type == "variable"){
+      const variable_stock = getVariableStock(product, products,available_stock)
+      if (variable_stock != website_stock){
+        await UpdateStockOfProduct(product.id, variable_stock)
+        fs.appendFileSync(logfilename,  generateLogMessage(
+          "Updated", product.type, product.id, product.name , "" , product.parent_id, website_stock, variable_stock , product["sku"]
+        ), (err) => {
+          if (err) throw err;
+          log('Stock update operation logged successfully!');
+        });
+        total_updated_products++
+        continue
+      }else{
+        fs.appendFileSync(logfilename, generateLogMessage(
+          "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
+        ), (err) => {
+          if (err) throw err;
+          log('No update!');
+        });
+        continue
+      }
     }
-
-    if(!product){
-      fs.appendFileSync(logfilename,  generateLogMessage(
-        "No Product", "", "", "" , product_stock["Product Name"] , "", "", "" , products_stockchanges["stock_changes"][key].SKU
+    else if(!product["sku"] ||  !isNumber(product["sku"])){
+      fs.appendFileSync(logfilename, generateLogMessage(
+        "No SKU", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock , ""
       ), (err) => {
-        if (err) throw err
-        console.log('Stock no/update operation logged successfully!')
-      })
+        if (err) throw err;
+        log('No update!');
+      });
       continue
     }
-
-    const website_stock = !product["stock_quantity"] ? 0 : product["stock_quantity"]
-    const catlitter_stock = product_stock["Catlitter"]
-    const wh_stock = product_stock["Warehouse"]
-    const latest_stock = Number(catlitter_stock) + Number(wh_stock)
-
-    if(product.type == "simple" || product.type == "variable"){
-        await UpdateStockOfProduct(product.id, latest_stock)
-
-        fs.appendFileSync(logfilename,  generateLogMessage(
-          "Updated", product.type, product.id, product.name , product_stock["Product Name"] , product.parent_id, website_stock, latest_stock , product["sku"]
-        ), (err) => {
-          if (err) throw err
-          console.log('Stock update operation logged successfully!')
-        })
-        continue
-  } else if(product.type == "variation"){
-    await UpdateStockOfProductVariation(product.parent_id, product.id, latest_stock)
-
-    fs.appendFileSync(logfilename,  generateLogMessage(
-      "Updated", product.type, product.id, product.name , product_stock["Product Name"] , product.parent_id, website_stock, latest_stock , product["sku"]
-    ), (err) => {
-      if (err) throw err
-      console.log('Stock update operation logged successfully!')
-    })
-  }else{}
+    else if(!available_stock[sku_in_stock]){
+      fs.appendFileSync(logfilename, generateLogMessage(
+        "Error :available_stock", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, product["sku"]
+      ), (err) => {
+        if (err) throw err;
+        log('No update!');
+      });
+      continue;
+    }
+    else if((website_stock == latest_stock)){
+      fs.appendFileSync(logfilename, generateLogMessage(
+        "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
+      ), (err) => {
+        if (err) throw err;
+        log('No update!');
+      });
+      continue
+    }else{
+      fs.appendFileSync(logfilename, generateLogMessage(
+        "Other", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, ""
+      ), (err) => {
+        if (err) throw err;
+        log('No update!');
+      });
+      continue;
+    }
   }
+
+  insertDocument("stock_sync",{
+    run_id : run_id,
+    updated_products : total_updated_products,
+    total_products : total_products
+  });
+
+  upsertDocument("inventory",{
+    client_id: "catlitter",
+  },
+  {
+    stock: available_stock
+  }
+  );
+
+  
   log("completed")
 }
-
-function get_stock_changes(available_stock, previous_stock){
-productstobeupdated = []
-for(key in available_stock){
-available_prod = available_stock[key]
-previous_prod = previous_stock[available_prod.SKU]
-if(!available_prod || !previous_prod){
-  continue
-}
-
-if(Number(available_prod["Catlitter"]) + Number(available_prod["Warehouse"])
-!= Number(previous_prod["Catlitter"]) + Number(previous_prod["Warehouse"])){
-  productstobeupdated = productstobeupdated.concat([available_prod])
-}
-}
-return productstobeupdated
-
-}
-
-
 function isNumber(string) {
-  const numberRegex = /^\d+$/
-  return numberRegex.test(string)
+  const numberRegex = /^\d+$/;
+  return numberRegex.test(string);
 }
 
 function getVariableStock(varproduct, products, available_stock){
@@ -127,9 +169,9 @@ function getVariableStock(varproduct, products, available_stock){
   for (i=0;i<varproduct.variations.length;i++){
     let variation = products.find(product => product.id=== varproduct.variations[i])
 
-    const sku_in_stock = '"'+variation["sku"]+'"'
+    const sku_in_stock = '"'+variation["sku"]+'"';
 
-    const website_stock = !variation["stock_quantity"] ?0 : variation["stock_quantity"]
+    const website_stock = !variation["stock_quantity"] ?0 : variation["stock_quantity"];
     const catlitter_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Catlitter"]
     const wh_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Warehouse"]
 
@@ -139,42 +181,42 @@ function getVariableStock(varproduct, products, available_stock){
 }
 
 function generateLogMessage(row_type, type, id, name, storemate_name, parent_id, website_stock, latest_stock, sku){
-  const updateOperation = `${row_type}, ${type} ,${sku}, ${id},${name}, ${storemate_name} , ${parent_id}, ${website_stock}, ${latest_stock}\n`
-  return updateOperation
+  const updateOperation = `${row_type}, ${type} ,${sku}, ${id},${name}, ${storemate_name} , ${parent_id}, ${website_stock}, ${latest_stock}\n`;
+  return updateOperation;
 }
 
 function generateRandomNumberString(length = 5) {
   // Create an array of digits (0-9)
-  const digits = '0123456789'
+  const digits = '0123456789';
 
   // Use a loop to build the random string
-  let result = ''
-  for (let i = 0 ;i < length; i++) {
-    result += digits[Math.floor(Math.random() * digits.length)]
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += digits[Math.floor(Math.random() * digits.length)];
   }
 
-  return result
+  return result;
 }
 
 // Run the automation function
 function getCurrentTime() {
-  const now = new Date()
-  const hours = now.getHours()
-  const minutes = now.getMinutes()
-  const seconds = now.getSeconds()
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
 
   // Adjust format as desired (e.g., 24-hour, AM/PM)
-  const formattedTime = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-  console.log("Current time:", formattedTime)
+  const formattedTime = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  log("Current time:", formattedTime);
 }
 
 
 async function UpdateStockOfProduct(id, stockQuantity) {
   // Call the PUT API to update the stock quantity
-  const apiUrl = `https://catlitter.lk/wp-json/wc/v3/products/${id}`
+  const apiUrl = `https://catlitter.lk/wp-json/wc/v3/products/${id}`;
   const putData = {
     stock_quantity: stockQuantity
-  }
+  };
   while(true){
 
   try {
@@ -183,25 +225,27 @@ async function UpdateStockOfProduct(id, stockQuantity) {
         Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',  // Replace 'asd' with your actual authorization code
         'Content-Type': 'application/json'
       }
-    })
+    });
 
-    console.log(`Stock quantity updated successfully for ID: ${id}`)
+    log(`Stock quantity updated successfully for ID: ${id}`);
     return
   } catch (error) {
-    console.error(`Failed to update stock quantity for ID: ${id}`, error)
+    console.error(`Failed to update stock quantity for ID: ${id}`, error);
   }
 }
 }
 
 function log(str){
-console.log('log: ' + str)
+log('log: ' + str)
 }
+
 async function UpdateStockOfProductVariation(parent_id, product_id, stockQuantity) {
   // Call the PUT API to update the stock quantity
-  const apiUrl = `https://catlitter.lk/wp-json/wc/v3/products/${parent_id}/variations/${product_id}`
+  const apiUrl = `https://catlitter.lk/wp-json/wc/v3/products/${parent_id}/variations/${product_id}`;
+  log(apiUrl)
   const putData = {
     stock_quantity: stockQuantity
-  }
+  };
   while(true){
   try {
     const putResponse = await axios.put(apiUrl, putData, {
@@ -209,12 +253,12 @@ async function UpdateStockOfProductVariation(parent_id, product_id, stockQuantit
         Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',  // Replace 'asd' with your actual authorization code
         'Content-Type': 'application/json'
       }
-    })
+    });
 
-    console.log(`Stock quantity updated successfully for SKU: ${parent_id}`)
-    return
+    log(`Stock quantity updated successfully for SKU: ${parent_id}`);
+    return;
   } catch (error) {
-    console.error(`Failed to update stock quantity for SKU: ${parent_id}`, error)
+    console.error(`Failed to update stock quantity for SKU: ${parent_id}`, error);
   }
 }
 }
@@ -222,16 +266,16 @@ async function UpdateStockOfProductVariation(parent_id, product_id, stockQuantit
 async function callApi(page) {
   while(true){
   try {
-    const url = 'https://catlitter.lk/wp-json/wc/v3/products?per_page=100&page=' + page
+    const url = 'https://catlitter.lk/wp-json/wc/v3/products?per_page=100&page=' + page;
     log(url)
     const headers = {
       Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',
-    }
+    };
 
-    const response = await axios.get(url, { headers })
-    return response.data
+    const response = await axios.get(url, { headers });
+    return response.data;
   } catch (error) {
-console.log(error)
+log(error)
 }
 }
 }
@@ -239,225 +283,159 @@ console.log(error)
 async function getProduct(id) {
   while(true){
   try {
-    const url = 'https://catlitter.lk/wp-json/wc/v3/products/' + id
+    const url = 'https://catlitter.lk/wp-json/wc/v3/products/' + id;
     log(url)
     const headers = {
       Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',
-    }
+    };
 
-    const response = await axios.get(url, { headers })
-    return response.data
+    const response = await axios.get(url, { headers });
+    return response.data;
   } catch (error) {
-    console.log(error)
+    log(error)
   }
 }
 }
 
-async function getAllVariationsofParent(parent) {
-  while(true){
-  try {
-    const url = 'https://catlitter.lk/wp-json/wc/v3/products?parent=' + parent
-    log(url)
-    const headers = {
-      Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',
-    }
-
-    const response = await axios.get(url, { headers })
-    return response.data
-  } catch (error) {
-    console.log(error)
-  }
-}
-}
-
-async function getProductbySKU(sku) {
-  while(true){
-  try {
-    const url = 'https://catlitter.lk/wp-json/wc/v3/products?sku=' + sku
-    log(url)
-    const headers = {
-      Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',
-    }
-
-    const response = await axios.get(url, { headers })
-    return response.data
-  } catch (error) {
-    console.log(error)
-  }
-}
-}
-
-
-async function fetchProductsFromWoocommerce(stock_changes) {
+async function fetchProductsFromWoocommerce() {
   
-  let products = []
+  let products = [];
 
   try {
-
-    //fetch all simple & variable products
     for (let i = 1; i < 1000; i++) {
-      const apiData = await callApi(i)
+      // Your loop body goes here
+      const apiData = await callApi(i);
       if (apiData == null || apiData.length === 0) {
-        break
+        break;
       } else {
-        products = products.concat(apiData) // Assign the result back to 'products'
+        products = products.concat(apiData); // Assign the result back to 'products'
       }
     }
 
-    //fetch missing products needed to do the stock update
-    let additional_stock_changes = []
-    for(i in stock_changes){
-        if(!products.find(p => p.sku == stock_changes[i].SKU)){ //
-          //its a variation, 
-          const product = await getProductbySKU(stock_changes[i].SKU)
-          if(!product[0] || product[0].parent_id == 0){
-            continue
-          }
-
-          products = products.concat(product)
-
-          //add the variable to stock changes. variation is already there.
-          variable = products.find(p => p.id == product[0].parent_id) // await getProduct(product[0].parent_id) // add to stock changes
-          products = products.concat([variable])
-          let variable_stock = 0
-          for (let var_row = 0; var_row < variable.variations.length ;var_row++) {
-                  let matching_product = products.find(p => p.id == variable.variations[var_row])
-                  if(!matching_product){
-                    matching_product = await getProduct(variable.variations[var_row])
-                  }else{
-                    matching_product = products.find(p => p.id == variable.variations[var_row])
-                  }
-                  products = products.concat(matching_product)
-                  variable_stock+=Number(matching_product.stock_quantity)
-                }
-
-          additional_stock_changes["variable-"+variable.id] = {
-            "Type" : "variable",
-            "Id" : variable.id,
-            "Product Name" : variable.name , "Variation Name" : "","SKU" : variable.sku,"Unit" : "","PET & CO": "0",
-            "PET LOVE": "0","Warehouse" : variable_stock ,"Catlitter": "0","Total" : variable_stock
-          }
+    log("fetching variations");
+    // let k = 0;
+    for (let rowIndex = 0; rowIndex < products.length; rowIndex++) {
+      let product = products[rowIndex];
+      let stock = 0;
+      if (product.variations && product.variations != null && product.variations.length > 0) {
+        for (let var_row = 0; var_row < product.variations.length; var_row++) {
+          const var_product = await getProduct(product.variations[var_row]);
+          products = products.concat([var_product]);
+          stock+=Number(var_product.stock_quantity)
+          // k++
+        }
       }
-      }
-    for (i in additional_stock_changes){
-        stock_changes["variable-"+additional_stock_changes[i].Id] = additional_stock_changes[i]
+      // products[rowIndex].stock_quantity = stock;
+      // if (k > 20){
+      //   break
+      // }
     }
-    //for variations of products 
-
-    // // let k = 0
-    // for (let rowIndex = 0 rowIndex < products.length rowIndex++) {
-    //   let product = products[rowIndex]
-    //   let stock = 0
-    //   //get this info only if the sku doesnt exist in products array but exists in the stock changes
-    //   if (product.variations && product.variations != null && product.variations.length > 0) {
-    //     for (let var_row = 0 var_row < product.variations.length var_row++) {
-    //       const var_product = await getProduct(product.variations[var_row])
-    //       products = products.concat([var_product])
-    //       stock+=Number(var_product.stock_quantity)
-    //       // k++
-    //     }
-    //   }
-    //   // products[rowIndex].stock_quantity = stock
-    //   // if (k > 20){
-    //   //   break
-    //   // }
-    // }
   } catch (error) {
-    console.log(error)
+    log(error)
   }
-  return {
-    "products": products,
-    "stock_changes" : stock_changes
-  }
+  return products;
 }
 
 async function login(driver) {
-  await driver.get('https://app.storematepro.lk/login')
+  await driver.get('https://app.storematepro.lk/login');
 
   // Step 2: Fill in the username field
-  await driver.findElement(By.id('username')).sendKeys('NASEEF')
+  await driver.findElement(By.id('username')).sendKeys('NASEEF');
 
   // Step 3: Fill in the password field
-  await driver.findElement(By.id('password')).sendKeys('80906')
+  await driver.findElement(By.id('password')).sendKeys('80906');
 
   // Step 4: Click the login button
-  await driver.findElement(By.className('btn btn-lg btn-primary btn-block rounded-pill')).click()
+  await driver.findElement(By.className('btn btn-lg btn-primary btn-block rounded-pill')).click();
 
   // Step 5: Wait until redirected to the home page
-  await driver.wait(until.urlIs('https://app.storematepro.lk/home'), 10000)
+  await driver.wait(until.urlIs('https://app.storematepro.lk/home'), 10000);
 }
 
 async function donwloadStock(driver, run_id) {
   try {
 
     // Step 6: Go to the stock report page
-    await driver.get('https://app.storematepro.lk/reports/location-wise-stock-reports')
+    await driver.get('https://app.storematepro.lk/reports/location-wise-stock-reports');
 
-    await driver.sleep(5000)
+    await driver.sleep(5000);
 
-    const pageLengthDropdown = await driver.findElement(By.name('location_stock_table_length'))
-    const pageLengthSelect = new Select(pageLengthDropdown)
-    await pageLengthSelect.selectByValue('-1')
+    const pageLengthDropdown = await driver.findElement(By.name('location_stock_table_length'));
+    const pageLengthSelect = new Select(pageLengthDropdown);
+    await pageLengthSelect.selectByValue('-1');
 
     
     // Find the parent div with class "dt-buttons btn-group"
-    const parentDiv = await driver.findElement(By.className('dt-buttons btn-group'))
+    const parentDiv = await driver.findElement(By.className('dt-buttons btn-group'));
 
     // Find all child elements of the parent div
-    const childElements = await parentDiv.findElements(By.xpath('./*'))
-    await driver.sleep(5000)
+    const childElements = await parentDiv.findElements(By.xpath('./*'));
+    await driver.sleep(5000);
     // Click the first child element
     if (childElements.length > 0) {      
       while(true){
         try{
-          childElements[0].click()
-          await driver.sleep(1000)
+          childElements[0].click();
+          await driver.sleep(1000);
           fs.renameSync("C:\\Users\\Ammar Ameerdeen\\Downloads\\Location Wise Stock Report - PET  CO.csv", `C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)
           log("downloaded :  location_wise_stock" )
-          break
+          break;
         }catch(error){
-          console.log(error)
+          log(error)
         }
         
       }
       
     }
   } catch (error) {
-    console.log(error)
+    log(error)
   }finally{
   }
 }
 
 function readCSV(filePath){
-  const fileContent = fs.readFileSync(filePath, 'utf-8')
-  const rows = fileContent.trim().split('\n')
-  const header = rows[0].split(',')
-  const data = rows.slice(1).map(row => row.split(','))
+  const fileContent = fs.readFileSync(filePath, 'utf-8');
+  const rows = fileContent.trim().split('\n');
+  const header = rows[0].split(',');
+  const data = rows.slice(1).map(row => row.split(','));
 
-  const groupedData = {}
+  const groupedData = {};
 
   data.forEach(row => {
-      const key = row[2]
+      const key = row[2];
 
-      const rowData = {}
+      const rowData = {};
       header.forEach((col, index) => {
-        rowData[col.trim().replace(/"/g, '')] = row[index].trim().replace(/"/g, '')  
-      })
-      groupedData[key] = rowData
-  })
+        if(col=='"SKU"'){
+          rowData[col.trim().replace(/"/g, '')] = row[index].trim();  
+        }else{
+        rowData[col.trim().replace(/"/g, '')] = row[index].trim().replace(/"/g, '');  
+        }
+      });
+      groupedData[key] = rowData;
+  });
 
-  // fs.unlink(filePath)
-  // console.log(`File ${filePath} deleted successfully!`)
+  // fs.unlink(filePath);
+  // log(`File ${filePath} deleted successfully!`);
   
-  return groupedData
+  return groupedData;
 }
 
 
 
 
+// function runJob() {
+//   log("start : runs every 21:00");
+//   nodeSchedule.scheduleJob('* 8 * * *', function () { 
+//     getCurrentTime()
+//     main()
+//   });
+// }
+
+
 function runJob() {
-  const schedule = '15 */1 * * *'
-  console.log(`start : run schedule ${schedule}`)
+  const schedule = '30 */2 * * *'
+  log(`start : run schedule ${schedule}`)
   nodeSchedule.scheduleJob(schedule, function () { 
     try{
     getCurrentTime()
