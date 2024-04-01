@@ -23,7 +23,7 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
 
       let order = woo_orders.find(o => o.id == order_id)
       if (!order) {
-        fs.unlinkSync(filePath)
+        await fs.unlinkSync(filePath)
         continue
       }
 
@@ -105,7 +105,7 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
         }
       }
 
-      fs.unlinkSync(filePath)
+      await fs.unlinkSync(filePath)
 
     } catch (error) {
       console.log(error)

@@ -2,7 +2,7 @@ const { sleep } = require('./common/utils');
 
 const MongoClient = require('mongodb').MongoClient;
 
-var mongo_url = 'mongodb://abameerdeen:sajahafeel2216@ec2-13-234-20-8.ap-south-1.compute.amazonaws.com:27017'
+var mongo_url = 'mongodb://abameerdeen:sajahafeel2216@erp.thesellerstack.com:27017'
 
 async function  getCollection(collection_name) {
     try {

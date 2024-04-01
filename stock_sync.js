@@ -12,13 +12,7 @@ const { sleep } = require('./common/utils.js');
 async function main() {
   let run_id =  generateRandomNumberString();
   log(`run id ${run_id}`)
-
-  // Initiate storemate in selenium
   const chromeOptions = new chrome.Options();
-  // chromeOptions.addArguments('--headless');
-  // chromeOptions.addArguments("--window-size=1920,1080")
-  // chromeOptions.addArguments("--start-maximized")
-  // chromeOptions.addArguments('--download-directory="C:\\Users\\Ammar Ameerdeen\\Downloads"');
 
   const driver = new Builder()
     .forBrowser('chrome')
@@ -27,11 +21,14 @@ async function main() {
 
  // Login to storemate
   log("initiating storemate automation")
-  await login(driver)
-
-  //download the stock report for catlitter.lk
-  await donwloadStock(driver, run_id)
-  await driver.quit();
+  while(true){
+    await login(driver)
+    //download the stock report for catlitter.lk
+    await donwloadStock(driver, run_id)
+    await driver.quit();
+    break
+  }
+  
 
   available_stock = readCSV(`C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)
  
@@ -236,7 +233,7 @@ async function UpdateStockOfProduct(id, stockQuantity) {
 }
 
 function log(str){
-log('log: ' + str)
+console.log('log: ' + str)
 }
 
 async function UpdateStockOfProductVariation(parent_id, product_id, stockQuantity) {

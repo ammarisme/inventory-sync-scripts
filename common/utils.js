@@ -22,6 +22,18 @@ function generateRandomNumberString(length = 5) {
     return new Promise(resolve => setTimeout(resolve, ms*1000));
   }
 
+  function getCurrentTime() {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+  
+    // Adjust format as desired (e.g., 24-hour, AM/PM)
+    const formattedTime = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    console.log("Current time:", formattedTime);
+  }
+  
+
   module.exports =  {
-    log, generateRandomNumberString,sleep
+    log, generateRandomNumberString,sleep,getCurrentTime
   }

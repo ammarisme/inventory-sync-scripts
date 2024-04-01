@@ -1,10 +1,10 @@
 const { By } = require('selenium-webdriver');
-const {  getCollectionBy, upsertDocument } = require('./mongo_functions.js');
+const { getCollectionBy, upsertDocument } = require('./mongo_functions.js');
 const { loginStoreMate, donwloadStock, getChromeDriver } = require('./selenium_functions.js');
-const { getProcessingOrders, getScheduledWoocommerceOrders } = require('./services/woocommerce_functions.js')
-const { log, generateRandomNumberString } = require('./common/utils.js')
-const {readCSV, convertToCSV, convertDarazToCSV} = require('./services/files.js')
-const {processFiles} = require('./services/order_processing.js');
+const { getProcessingOrders, getScheduledWoocommerceOrders, getInvoiceGenerateOrders, getTestOrders } = require('./services/woocommerce_functions.js')
+const { log, generateRandomNumberString, getCurrentTime } = require('./common/utils.js')
+const { readCSV, convertToCSV, convertDarazToCSV } = require('./services/files.js')
+const { processFiles } = require('./services/order_processing.js');
 const { UPLOADED_ORDER_NEW, UPLOADED_ORDER_REPROCESS_SCHEDULED } = require('./statuses.js');
 const nodeSchedule = require('node-schedule');
 
@@ -19,7 +19,7 @@ class Sale {
 }
 
 
-async function main(run_id,available_stock, processing_orders) {
+async function main(run_id, available_stock, processing_orders) {
     const driver2 = getChromeDriver(true) // go headless chrom
     // Replace these with your specific values
     const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\stock_sync\\invoices';
@@ -39,90 +39,122 @@ async function main(run_id,available_stock, processing_orders) {
 }
 
 
-async function entry_function(type){
-try {
-    let run_id = ""
-    let available_stock
-    if (process.argv[3]) {
-        run_id = process.argv[3]
-    } else {
-        run_id = generateRandomNumberString()
+async function entry_function(type) {
+    try {
+        let run_id = ""
+        let available_stock
         const driver = getChromeDriver(false) // go real chrome
-        await loginStoreMate(driver)
-        await donwloadStock(driver, run_id)
-        available_stock = readCSV(`C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)
+
+        if (process.argv[3]) {
+            run_id = process.argv[3]
+        } else {
+            run_id = generateRandomNumberString()
+            await loginStoreMate(driver)
+            await donwloadStock(driver, run_id)
+            available_stock = readCSV(`C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)
+        }
+
+        let processing_orders;
+        log(`start processing: ${type}`)
+        switch (type) {
+            case "scheduled_wooorders":
+                processing_orders = await getScheduledWoocommerceOrders()
+                if (processing_orders.length == 0) {
+                    log("no orders to process")
+                    return
+                }
+                convertToCSV(processing_orders, "CAT")
+                break
+            case "new_wooorders":
+                processing_orders = await getProcessingOrders()
+                if (processing_orders.length == 0) {
+                    log("no orders to process")
+                    return
+                }
+                convertToCSV(processing_orders, "CAT")
+                break
+            case "test":
+                processing_orders = await getTestOrders()
+                if (processing_orders.length == 0) {
+                    log("no orders to process")
+                    return
+                }
+                convertToCSV(processing_orders, "CAT")
+                break
+            case "invoice_generate":
+                processing_orders = await getInvoiceGenerateOrders()
+                if (processing_orders.length == 0) {
+                    log("no orders to process")
+                    return
+                }
+                convertToCSV(processing_orders, "CAT")
+                break
+            case "new_darazorders":
+                processing_orders = await getCollectionBy("invoices", {
+                    invoice_number: { $regex: "^DRZ" }, // Matches documents where 'a' starts with "x"
+                    status: UPLOADED_ORDER_NEW, // Matches documents where 'b' is equal to 3
+                })
+                if (processing_orders.length == 0) {
+                    log("no orders to process")
+                    return
+                }
+                convertDarazToCSV(processing_orders)
+                break
+            case "schedule_darazorders":
+                processing_orders = await getCollectionBy("invoices", {
+                    invoice_number: { $regex: "^DRZ" }, // Matches documents where 'a' starts with "x"
+                    status: UPLOADED_ORDER_REPROCESS_SCHEDULED, // Matches documents where 'b' is equal to 3
+                })
+                if (processing_orders.length == 0) {
+                    log("no orders to process")
+                    return
+                }
+                convertDarazToCSV(processing_orders)
+                break
+            default:
+                break;
+        }
+        if (processing_orders) {
+            main(run_id, available_stock, processing_orders);
+        }
+
         driver.quit();
-    }
 
-    let processing_orders;
-    log(`start processing: ${type}`)
-    switch (type) {
-        case "scheduled_wooorders":
-            processing_orders = await getScheduledWoocommerceOrders()
-            if (processing_orders.length == 0) {
-                log("no orders to process")
-                return
-            }
-            convertToCSV(processing_orders,"CAT")
-            break
-        case "new_wooorders":
-            processing_orders = await getProcessingOrders()
-            if (processing_orders.length == 0) {
-                log("no orders to process")
-                return
-            }
-            convertToCSV(processing_orders,"CAT")
-            break
-        case "new_darazorders":
-            processing_orders = await getCollectionBy("invoices", {
-                invoice_number: { $regex: "^DRZ" }, // Matches documents where 'a' starts with "x"
-                status: UPLOADED_ORDER_NEW, // Matches documents where 'b' is equal to 3
-            })
-            if (processing_orders.length == 0) {
-                log("no orders to process")
-                return
-            }
-            convertDarazToCSV(processing_orders)
-            break
-        case "schedule_darazorders":
-            processing_orders = await getCollectionBy("invoices", {
-                invoice_number: { $regex: "^DRZ" }, // Matches documents where 'a' starts with "x"
-                status: UPLOADED_ORDER_REPROCESS_SCHEDULED, // Matches documents where 'b' is equal to 3
-            })
-            if (processing_orders.length == 0) {
-                log("no orders to process")
-                return
-            }
-            convertDarazToCSV(processing_orders)
-            break
-        default:
-            break;
-    }
-    if(processing_orders){
-        main(run_id, available_stock,processing_orders);
-    }
-    
-
-} catch (error) {
-    log(error)
-}
-}
-
-function runJob() {
-    const schedule = '30 */6 * * *'
-    console.log(`start : run schedule ${schedule}`)
-    nodeSchedule.scheduleJob(schedule, function () { 
-      try{
-      getCurrentTime()
-      entry_function("new_wooorders")
-      entry_function("scheduled_wooorders")
-    }catch(error){
+    } catch (error) {
         log(error)
-        log("---------------------------------------------------------------")
-      }
+    }
+}
+//Production
+async function runJob() {
+    const schedule = '30 */2 * * *'
+    console.log(`start : run schedule ${schedule}`)
+    getCurrentTime()
+    await entry_function("new_wooorders")
+    await entry_function("invoice_generate")
+    await entry_function("scheduled_wooorders")
+    nodeSchedule.scheduleJob(schedule, async function () {
+        try {
+            getCurrentTime()
+            await entry_function("new_wooorders")
+            await entry_function("invoice_generate")
+            await entry_function("scheduled_wooorders")
+        } catch (error) {
+            log(error)
+            log("---------------------------------------------------------------")
+        }
     })
-  }
+}
 
-entry_function("new_wooorders")
+
 runJob()
+
+//Test
+// async function testJob() {
+//     const schedule = '30 */2 * * *'
+//     console.log(`start : run schedule ${schedule}`)
+//     getCurrentTime()
+//     await entry_function("test")
+// }
+// testJob()
+
 

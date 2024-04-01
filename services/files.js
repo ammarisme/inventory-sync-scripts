@@ -35,11 +35,14 @@ function readCSV(filePath) {
       // Loop through each line item
       const nosku = order.line_items.find(i => i.sku == '')
       if (nosku) {
+        console.log(`No SKU / Order id : ${order.id},  Product : ${nosku.id},${nosku.name} `)
         return
       }
+      first_line = true
       order.line_items.forEach(item => {
         // No need to extract data, just create empty cells
-        csvContent.push(`${prefix}${order.number},${order.billing.first_name},,${order.billing.last_name}, ${order.billing.first_name},${order.billing.phone},${order.billing.email},"${order.billing.address_1}","${order.billing.address_2}","${order.billing.state}","${item.name}",${item.sku},${item.quantity},pieces,${item.price},,,${order.shipping_total}`);
+        csvContent.push(`${prefix}${order.number},${order.billing.first_name},,${order.billing.last_name}, ${order.billing.first_name},${order.billing.phone},${order.billing.email},"${order.billing.address_1}","${order.billing.address_2}","${order.billing.state}","${item.name}",${item.sku},${item.quantity},pieces,${item.price},,,${first_line ? order.shipping_total: 0}`);
+        first_line = false
       });
       const csvString = csvContent.join('\n');
   
