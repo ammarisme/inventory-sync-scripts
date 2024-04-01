@@ -19,7 +19,7 @@ class Sale {
 }
 
 
-async function main(run_id, available_stock, processing_orders) {
+async function main(run_id, processing_orders) {
     const driver2 = getChromeDriver(true) // go headless chrom
     // Replace these with your specific values
     const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\stock_sync\\invoices';
@@ -28,7 +28,7 @@ async function main(run_id, available_stock, processing_orders) {
     const buttonLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[2]/button'); // Replace with actual locator
     const finalSubmit = By.xpath('//*[@id="import_sale_form"]/div[3]/div/button'); // Replace with actual locator
     await loginStoreMate(driver2)
-    const transfers = await processFiles(driver2, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, available_stock, run_id, processing_orders);
+    const transfers = await processFiles(driver2, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, run_id, processing_orders);
     await upsertDocument("runs", {
         "run_id": run_id,
         "status": "0",
@@ -42,16 +42,10 @@ async function main(run_id, available_stock, processing_orders) {
 async function entry_function(type) {
     try {
         let run_id = ""
-        let available_stock
-        const driver = getChromeDriver(false) // go real chrome
-
         if (process.argv[3]) {
             run_id = process.argv[3]
         } else {
             run_id = generateRandomNumberString()
-            await loginStoreMate(driver)
-            await donwloadStock(driver, run_id)
-            available_stock = readCSV(`C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)
         }
 
         let processing_orders;
@@ -115,10 +109,10 @@ async function entry_function(type) {
                 break;
         }
         if (processing_orders) {
-            main(run_id, available_stock, processing_orders);
+            await main(run_id, processing_orders);
         }
 
-        driver.quit();
+
 
     } catch (error) {
         log(error)

@@ -5,7 +5,7 @@ const { createOrderNote, updateOrderStatus } = require('./woocommerce_functions.
 const { upsertDocument } = require('../mongo_functions.js');
 
 
-async function processFiles(driver, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, available_stock, run_id, woo_orders) {
+async function processFiles(driver, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, run_id, woo_orders) {
   const files = fs.readdirSync(directoryPath);
   const run = {}
   run['transfers'] = []
@@ -23,7 +23,7 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
 
       let order = woo_orders.find(o => o.id == order_id)
       if (!order) {
-        await fs.unlinkSync(filePath)
+        fs.unlinkSync(filePath)
         continue
       }
 
@@ -112,20 +112,6 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
     }
   }
 
-
-  for (let key in total_order_qtys) {
-    const available_product = available_stock[`"${key}"`]
-
-    if (available_product && total_order_qtys[key] > Number(available_product["Catlitter"])) {
-      run['transfers'].push({
-        sku: key,
-        product_name: available_product["Product Name"],
-        order_qty: total_order_qtys[key],
-        available_qty: Number(available_product["Catlitter"]),
-        required: total_order_qtys[key] - Number(available_product["Catlitter"])
-      })
-    }
-  }
   return run;
 }
 
