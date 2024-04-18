@@ -94,10 +94,20 @@ async function entry_function(type) {
                 }
                 convertDarazToCSV(processing_orders)
                 break
+            case "schedule_darazorders":
+                processing_orders = await getCollectionBy("invoices", {
+                    invoice_number: { $regex: "^DRZ" }, // Matches documents where 'a' starts with "x"
+                    status: UPLOADED_ORDER_REPROCESS_SCHEDULED, // Matches documents where 'b' is equal to 3
+                })
+                if (processing_orders.length == 0) {
+                    log("no orders to process")
+                    return
+                }
+                convertDarazToCSV(processing_orders)
+                break
             default:
                 break;
         }
-
         if (processing_orders) {
             await main(run_id, processing_orders);
         }
@@ -110,42 +120,25 @@ async function entry_function(type) {
 }
 //Production
 async function runJob() {
-    try{
-    const schedule = '30 */1 * * *'
-    const daraz_schedule = '*/5 * * * *'
+    const schedule = '30 */ * * *'
     console.log(`start : run schedule ${schedule}`)
-
-
     getCurrentTime()
-    await entry_function("new_darazorders");
     await entry_function("new_wooorders")
     await entry_function("invoice_generate")
     await entry_function("scheduled_wooorders")
+    await entry_function("new_darazorders");
     nodeSchedule.scheduleJob(schedule, async function () {
         try {
             getCurrentTime()
-            await entry_function("new_darazorders");
             await entry_function("new_wooorders")
             await entry_function("invoice_generate")
             await entry_function("scheduled_wooorders")
-        } catch (error) {
-            log(error)
-            log("---------------------------------------------------------------")
-        }
-    })
-    nodeSchedule.scheduleJob(daraz_schedule, async function () {
-        try {
-            getCurrentTime()
-            // await entry_function("new_darazorders");
             await entry_function("new_darazorders");
         } catch (error) {
             log(error)
             log("---------------------------------------------------------------")
         }
     })
-}catch(error){
-    log(error)
-}
 }
 
 

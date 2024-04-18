@@ -2,7 +2,7 @@ const { By } = require('selenium-webdriver');
 const { Select } = require('selenium-webdriver');
 const fs = require('fs');
 const { createOrderNote, updateOrderStatus } = require('./woocommerce_functions.js')
-const { upsertDocument } = require('../mongo_functions.js');
+const { upsertDocument, updateCollectionStatus } = require('../mongo_functions.js');
 
 
 async function processFiles(driver, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, run_id, woo_orders) {
@@ -65,27 +65,15 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
             status: 2,
             invoice_data: order
           })
-          await upsertDocument("invoices",
-            {
-              '$and': [{ "invoice_number": invoice_number }, { run_id: run_id }]
-            }, {
-            "invoice_number": invoice_number,
-            "invoice_data": order.line_items,
-            "status": 1,
-            run_id: run_id,
-            "source_order_number": order_id,
-          })
+          await updateCollectionStatus("invoices",{
+            '$and': [{ "invoice_number": invoice_number }]
+          },{status :1})
         } else {
           //record success in mongo
-          await upsertDocument("invoices",
-            {
-              '$and': [{ "invoice_number": invoice_number }, { run_id: run_id }]
-            }, {
-              "invoice_data": order.line_items,
-            "status": 2,
-            run_id: run_id,
-            "source_order_number": order_id,
-          })
+          await updateCollectionStatus("invoices",{
+            '$and': [{ "invoice_number": invoice_number }]
+          },{status :2})
+          
           run['orders'].push({
             order_id: order_id,
             status: 1,

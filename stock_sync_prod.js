@@ -68,7 +68,6 @@ async function main() {
             "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
           ), (err) => {
             if (err) throw err;
-            console.log('Stock update operation logged successfully!');
           });
           total_updated_products++
           continue
@@ -79,7 +78,6 @@ async function main() {
             "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
           ), (err) => {
             if (err) throw err;
-            console.log('Stock update operation logged successfully!');
           });
           total_updated_products++
           continue
@@ -88,7 +86,6 @@ async function main() {
             "No Update", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
           ), (err) => {
             if (err) throw err;
-            console.log('No update!');
           });
           continue
       }
@@ -100,7 +97,6 @@ async function main() {
           "Updated", product.type, product.id, product.name , "" , product.parent_id, website_stock, variable_stock , product["sku"]
         ), (err) => {
           if (err) throw err;
-          console.log('Stock update operation logged successfully!');
         });
         total_updated_products++
         continue
@@ -109,7 +105,6 @@ async function main() {
           "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
         ), (err) => {
           if (err) throw err;
-          console.log('No update!');
         });
         continue
       }
@@ -119,7 +114,6 @@ async function main() {
         "No SKU", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock , ""
       ), (err) => {
         if (err) throw err;
-        console.log('No update!');
       });
       continue
     }
@@ -128,7 +122,6 @@ async function main() {
         "Error :available_stock", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, product["sku"]
       ), (err) => {
         if (err) throw err;
-        console.log('No update!');
       });
       continue;
     }
@@ -137,7 +130,6 @@ async function main() {
         "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
       ), (err) => {
         if (err) throw err;
-        console.log('No update!');
       });
       continue
     }else{
@@ -145,7 +137,6 @@ async function main() {
         "Other", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, ""
       ), (err) => {
         if (err) throw err;
-        console.log('No update!');
       });
       continue;
     }
@@ -228,7 +219,7 @@ async function UpdateStockOfProduct(id, stockQuantity) {
       }
     });
 
-    console.log(`Stock quantity updated successfully for ID: ${id}`);
+    // console.log(`Stock quantity updated successfully for ID: ${id}`);
     return
   } catch (error) {
     console.error(`Failed to update stock quantity for ID: ${id}`, error);
@@ -237,7 +228,7 @@ async function UpdateStockOfProduct(id, stockQuantity) {
 }
 
 function log(str){
-console.log('log: ' + str)
+// console.log('log: ' + str)
 }
 async function UpdateStockOfProductVariation(parent_id, product_id, stockQuantity) {
   // Call the PUT API to update the stock quantity
@@ -255,7 +246,7 @@ async function UpdateStockOfProductVariation(parent_id, product_id, stockQuantit
       }
     });
 
-    console.log(`Stock quantity updated successfully for SKU: ${parent_id}`);
+    // console.log(`Stock quantity updated successfully for SKU: ${parent_id}`);
     return;
   } catch (error) {
     console.error(`Failed to update stock quantity for SKU: ${parent_id}`, error);

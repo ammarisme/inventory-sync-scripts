@@ -20,10 +20,42 @@ async function getProcessingOrders() {
     }
   }
 
+  async function getOrdersByStatus(status, i) {
+    while (true) {
+      try {
+        const url = `https://catlitter.lk/wp-json/wc/v3/orders?status=${status}&page=${i}&per_page=100`;
+        console.log(url)
+        const headers = {
+          Authorization: 'Basic Y2tfYjdlNTVlMTdjY2U4ZDEzYjA1MGM4MmU3Yjg1ZmRlZjg5MzVhM2FjNzpjc185NGZjZDg0MTliZTgzZmUzYWZjMGNlZTJmOGRjNjEwZWUwYTUzNWYy',
+        };
+  
+        const response = await axios.get(url,  {headers});
+        return response.data;
+      } catch (error) {
+        throw new Error(`Failed to call API: ${error.message}`);
+      }
+    }
+  }
+
   async function getTestOrders() {
     while (true) {
       try {
         const url = 'https://catlitter.lk/wp-json/wc/v3/orders?status=init-test&page=1&per_page=100';
+        const headers = {
+          Authorization: 'Basic Y2tfYjdlNTVlMTdjY2U4ZDEzYjA1MGM4MmU3Yjg1ZmRlZjg5MzVhM2FjNzpjc185NGZjZDg0MTliZTgzZmUzYWZjMGNlZTJmOGRjNjEwZWUwYTUzNWYy',
+        };
+  
+        const response = await axios.get(url,  {headers});
+        return response.data;
+      } catch (error) {
+        throw new Error(`Failed to call API: ${error.message}`);
+      }
+    }
+  }
+  async function getCompletedOrders(i) {
+    while (true) {
+      try {
+        const url = `https://catlitter.lk/wp-json/wc/v3/orders?status=completed&page=${i}&per_page=100`;
         const headers = {
           Authorization: 'Basic Y2tfYjdlNTVlMTdjY2U4ZDEzYjA1MGM4MmU3Yjg1ZmRlZjg5MzVhM2FjNzpjc185NGZjZDg0MTliZTgzZmUzYWZjMGNlZTJmOGRjNjEwZWUwYTUzNWYy',
         };
@@ -139,5 +171,6 @@ async function getScheduledWoocommerceOrders() {
 }
 
 module.exports = {
-    getProcessingOrders, createOrderNote, updateOrderStatus, getProduct, getScheduledWoocommerceOrders,getInvoiceGenerateOrders, getTestOrders  
+    getProcessingOrders, createOrderNote, updateOrderStatus, getProduct, getScheduledWoocommerceOrders,getInvoiceGenerateOrders, getTestOrders  ,getCompletedOrders, 
+    getOrdersByStatus
 }

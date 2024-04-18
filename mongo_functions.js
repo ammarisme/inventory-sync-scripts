@@ -1,13 +1,13 @@
 const { sleep } = require('./common/utils');
+const { mydb, mongo_url } = require('./config');
 
 const MongoClient = require('mongodb').MongoClient;
 
-var mongo_url = 'mongodb://abameerdeen:sajahafeel2216@erp.thesellerstack.com:27017'
 
 async function  getCollection(collection_name) {
     try {
       const client = await MongoClient.connect(mongo_url);
-      const db = client.db('catlitter'); // Assign connection to db after successful connection
+      const db = client.db(mydb); // Assign connection to db after successful connection
 
       const docs = await db.collection(collection_name).find({}).toArray();
       console.log(docs)
@@ -21,7 +21,7 @@ async function  getCollection(collection_name) {
   async function deleteDocument(collection_name, filter) {
     try {
       const client = await MongoClient.connect(mongo_url);
-      const db = client.db('catlitter');
+      const db = client.db(mydb);
 
       const result = await db.collection(collection_name).deleteOne(filter);
       console.log(`Documents deleted: ${result.deletedCount}`);
@@ -36,7 +36,7 @@ async function  getCollection(collection_name) {
   async function updateDocument(collection_name, filter, update) {
     try {
       const client = await MongoClient.connect(mongo_url);
-      const db = client.db('catlitter');
+      const db = client.db(mydb);
 
       const result = await db.collection(collection_name).updateOne(filter, update);
       console.log(`Documents modified: ${result.modifiedCount}`);
@@ -50,7 +50,7 @@ async function  getCollection(collection_name) {
   async function insertDocument(collection_name, document) {
     try {
       const client = await MongoClient.connect(mongo_url);
-      const db = client.db('catlitter');
+      const db = client.db(mydb);
 
       const currentDate = new Date();
 
@@ -67,13 +67,52 @@ async function  getCollection(collection_name) {
       // Handle insertion error with appropriate response (e.g., res.status(500).send('Error inserting document'))
     }
   }
+
+  async function insertMultipleDocuments(collection_name, documents) {
+    try {
+      const client = await MongoClient.connect(mongo_url);
+      const db = client.db(mydb);
   
+      const currentDate = new Date();
+  
+      // Add current date and time to each document
+      documents.forEach(doc => {
+        doc.createdAt = currentDate;
+        doc.updatedAt = currentDate;
+      });
+  
+      const result = await db.collection(collection_name).insertMany(documents);
+  
+      console.log(`${result.insertedCount} documents inserted with IDs: ${result.insertedIds}`);
+  
+      client.close();
+    } catch (err) {
+      console.error(err);
+      // Handle insertion error with appropriate response (e.g., res.status(500).send('Error inserting documents'))
+    }
+  }
+
+  async function updateCollectionStatus(collection_name, filter, update) {
+    try {
+      const client = await MongoClient.connect(mongo_url);
+      const db = client.db(mydb);
+      const updateResult = await db.collection(collection_name).updateMany(filter, {
+        $set: update}, // Set the status to 4
+      );
+  
+      console.log(`Updated ${updateResult.modifiedCount} documents.`);
+      await client.close();
+    } catch (err) {
+      console.error("Error updating collection:", err);
+    }
+  }
+
   async function upsertDocument(collection_name, filter, document) {
     let client;
     while(true){
     try {
       client = await MongoClient.connect(mongo_url);
-      const db = client.db('catlitter');
+      const db = client.db(mydb);
 
       const currentDate = new Date();
 
@@ -104,7 +143,7 @@ async function  getCollection(collection_name) {
   async function getCollectionBy(collection_name,filter) {
     try {
       const client = await MongoClient.connect(mongo_url);
-      const db = client.db('catlitter'); // Assign connection to db after successful connection
+      const db = client.db(mydb); // Assign connection to db after successful connection
   
       const docs = await db.collection(collection_name).find(filter).toArray();
       client.close(); // Close the connection after use
@@ -114,6 +153,20 @@ async function  getCollection(collection_name) {
     }
   }
   
+  async function updateCollectionStatus(collection_name, filter, update) {
+    try {
+      const client = await MongoClient.connect(mongo_url);
+      const db = client.db(mydb);
+      const updateResult = await db.collection(collection_name).updateMany(filter, {
+        $set: update}, // Set the status to 4
+      );
+  
+      console.log(`Updated ${updateResult.modifiedCount} documents.`);
+      await client.close();
+    } catch (err) {
+      console.error("Error updating collection:", err);
+    }
+  }
 // Export all functions using named exports
 module.exports = {
   getCollection,
@@ -121,5 +174,7 @@ module.exports = {
   updateDocument,
   insertDocument,
   getCollectionBy,
-  upsertDocument
+  upsertDocument,
+  updateCollectionStatus,
+  insertMultipleDocuments
 };

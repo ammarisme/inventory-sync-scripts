@@ -60,6 +60,9 @@ function readCSV(filePath) {
   
     // Loop through each order
     processingOrders.forEach(order => {
+      if(!order.invoice_data.line_items){
+return
+      }
       // Add main header
       const csvContent = [];
       csvContent.push(header);
@@ -77,14 +80,14 @@ function readCSV(filePath) {
         const sku = item["Seller SKU"]
         const price = item["Unit Price"]
         const shipping_total = 0
-        const quantity = 0
+        const quantity = 1
   
-        csvContent.push(`"${order.invoice_number}","${first_name}","","${last_name}","${first_name}","${phone_number}","${email}","${address1}","${address2}","${state}","${item_name}",${sku},${quantity}","pieces","${price}","","","${shipping_total}`);
+        csvContent.push(`"${order.invoice_number}","${first_name}","","${last_name}","${phone_number}","${email}","${address1}","${address2}","","${state}","${item_name}","${sku}",${quantity},"pieces","${price}","","",""`);
       });
       const csvString = csvContent.join('\n');
   
       // Write CSV to file
-      fs.writeFileSync(`.\\DRZ_invoices\\${order.invoice_number}.csv`, csvString);
+      fs.writeFileSync(`.\\invoices\\${order.invoice_number}.csv`, csvString);
       console.log(`${order.invoice_number}.csv file created successfully!`);
     });
   
