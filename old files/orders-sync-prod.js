@@ -1,11 +1,11 @@
 const { By } = require('selenium-webdriver');
-const { getCollectionBy, upsertDocument } = require('./mongo_functions.js');
-const { loginStoreMate, donwloadStock, getChromeDriver } = require('./selenium_functions.js');
-const { getProcessingOrders, getScheduledWoocommerceOrders, getInvoiceGenerateOrders, getTestOrders } = require('./services/woocommerce_functions.js')
-const { log, generateRandomNumberString, getCurrentTime } = require('./common/utils.js')
-const { readCSV, convertToCSV, convertDarazToCSV } = require('./services/files.js')
-const { processFiles } = require('./services/order_processing.js');
-const { UPLOADED_ORDER_NEW, UPLOADED_ORDER_REPROCESS_SCHEDULED } = require('./statuses.js');
+const { getCollectionBy, upsertDocument } = require('../mongo_functions.js');
+const { loginStoreMate, donwloadStock, getChromeDriver } = require('../selenium_functions.js');
+const { getProcessingOrders, getScheduledWoocommerceOrders, getInvoiceGenerateOrders, getTestOrders } = require('../services/woocommerce_functions.js')
+const { log, generateRandomNumberString, getCurrentTime } = require('../common/utils.js')
+const { readCSV, convertToCSV, convertDarazToCSV } = require('../services/files.js')
+const { processFiles } = require('../services/order_processing.js');
+const { UPLOADED_ORDER_NEW, UPLOADED_ORDER_REPROCESS_SCHEDULED } = require('../statuses.js');
 const nodeSchedule = require('node-schedule');
 
 class Sale {
@@ -22,7 +22,7 @@ class Sale {
 async function main(run_id, processing_orders) {
     const driver2 = getChromeDriver(true) // go headless chrom
     // Replace these with your specific values
-    const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\stock_sync\\invoices';
+    const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\github\\store-sync\\invoices';
     const url = 'https://app.storematepro.lk/import-sales';
     const uploadElementLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[1]/div/input'); // Replace with actual locator
     const buttonLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[2]/button'); // Replace with actual locator
@@ -142,7 +142,7 @@ async function runJob() {
 }
 
 
-runJob()
+// runJob()
 
 //Test
 // async function testJob() {

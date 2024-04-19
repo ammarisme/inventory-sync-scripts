@@ -1,11 +1,13 @@
 const { By } = require('selenium-webdriver');
-const { getCollectionBy, upsertDocument } = require('./mongo_functions.js');
+const { getCollectionBy, upsertDocument, insertDocument } = require('./mongo_functions.js');
 const { loginStoreMate, donwloadStock, getChromeDriver } = require('./selenium_functions.js');
 const { getProcessingOrders, getScheduledWoocommerceOrders, getInvoiceGenerateOrders, getTestOrders } = require('./services/woocommerce_functions.js')
 const { log, generateRandomNumberString, getCurrentTime } = require('./common/utils.js')
 const { readCSV, convertToCSV, convertDarazToCSV } = require('./services/files.js')
 const { processFiles } = require('./services/order_processing.js');
-const { UPLOADED_ORDER_NEW, UPLOADED_ORDER_REPROCESS_SCHEDULED } = require('./statuses.js');
+const {  OrderStatuses } = require('./statuses.js'); 
+
+//UPLOADED_ORDER_NEW, UPLOADED_ORDER_REPROCESS_SCHEDULED
 const nodeSchedule = require('node-schedule');
 
 class Sale {
@@ -19,21 +21,21 @@ class Sale {
 }
 
 
-async function main(run_id, processing_orders) {
+async function main(run_id, processing_orders, invoice_prefix) {
     const driver2 = getChromeDriver(true) // go headless chrom
     // Replace these with your specific values
-    const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\stock_sync\\invoices';
+    const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\github\\store-sync\\invoices';
     const url = 'https://app.storematepro.lk/import-sales';
     const uploadElementLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[1]/div/input'); // Replace with actual locator
     const buttonLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[2]/button'); // Replace with actual locator
     const finalSubmit = By.xpath('//*[@id="import_sale_form"]/div[3]/div/button'); // Replace with actual locator
     await loginStoreMate(driver2)
-    const transfers = await processFiles(driver2, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, run_id, processing_orders);
-    await upsertDocument("runs", {
+    await processFiles(driver2, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, processing_orders, invoice_prefix);
+    await insertDocument("runs", {
         "run_id": run_id,
-        "status": "0",
-        "transfers": transfers,
-    }, { "run_id": run_id }
+    }, {
+        "run_id": run_id ,
+        "source" : "catlitter.lk"}
     )
     driver2.quit()
 }
@@ -47,7 +49,7 @@ async function entry_function(type) {
         } else {
             run_id = generateRandomNumberString()
         }
-
+        let invoice_prefix;
         let processing_orders;
         log(`start processing: ${type}`)
         switch (type) {
@@ -58,6 +60,7 @@ async function entry_function(type) {
                     return
                 }
                 convertToCSV(processing_orders, "CAT")
+                invoice_prefix="CAT"
                 break
             case "new_wooorders":
                 processing_orders = await getProcessingOrders()
@@ -66,6 +69,7 @@ async function entry_function(type) {
                     return
                 }
                 convertToCSV(processing_orders, "CAT")
+                invoice_prefix="CAT"
                 break
             case "test":
                 processing_orders = await getTestOrders()
@@ -74,6 +78,7 @@ async function entry_function(type) {
                     return
                 }
                 convertToCSV(processing_orders, "CAT")
+                invoice_prefix="CAT"
                 break
             case "invoice_generate":
                 processing_orders = await getInvoiceGenerateOrders()
@@ -82,24 +87,26 @@ async function entry_function(type) {
                     return
                 }
                 convertToCSV(processing_orders, "CAT")
+                invoice_prefix="CAT"
                 break
             case "new_darazorders":
                 processing_orders = await getCollectionBy("invoices", {
-                    invoice_number: { $regex: "^DRZ" }, // Matches documents where 'a' starts with "x"
-                    status: UPLOADED_ORDER_NEW, // Matches documents where 'b' is equal to 3
+                    invoice_number: { $regex: "^DRZ" },
+                    status: OrderStatuses.order_confirmed, 
                 })
                 if (processing_orders.length == 0) {
                     log("no orders to process")
                     return
                 }
                 convertDarazToCSV(processing_orders)
+                invoice_prefix="DRZ"
                 break
             default:
                 break;
         }
 
         if (processing_orders) {
-            await main(run_id, processing_orders);
+            await main(run_id, processing_orders, invoice_prefix);
         }
 
 
@@ -151,7 +158,7 @@ async function runJob() {
 
 runJob()
 
-//Test
+
 // async function testJob() {
 //     const schedule = '30 */2 * * *'
 //     console.log(`start : run schedule ${schedule}`)

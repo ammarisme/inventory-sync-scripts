@@ -3,25 +3,40 @@ const { Select } = require('selenium-webdriver');
 const fs = require('fs');
 const { createOrderNote, updateOrderStatus } = require('./woocommerce_functions.js')
 const { upsertDocument, updateCollectionStatus } = require('../mongo_functions.js');
+const { OrderStatuses } = require('../statuses.js');
+const { createOrder, updateInternalOrderStatus } = require('../api.js');
 
+function extractOrderId(fileName) {
+  // Split the filename by underscores, ensuring at least 2 parts (including extension)
+  const parts = fileName.split("_");
+  if (parts.length < 2) {
+    return "Invalid format"; // Handle invalid filenames
+  }
+  // Extract the desired part (starting from the 3rd character)
+  const orderId = parts[1].slice(2);
 
-async function processFiles(driver, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, run_id, woo_orders) {
+  // Return the extracted order ID
+  return orderId;
+};
+
+// generate invoices on storemate.
+// update status on woocommerce
+async function processFiles(driver, directoryPath, url, uploadElementLocator, buttonLocator, finalSubmit, orders, invoice_prefix) {
   const files = fs.readdirSync(directoryPath);
   const run = {}
   run['transfers'] = []
   run['orders'] = []
-  run["source"] = "catlitter.lk"
 
   const total_order_qtys = {}
 
   for (const fileName of files) {
     try {
       console.log("processing : " + fileName)
-      const order_id = fileName.split("_")[0].replace("CAT", "").replace("DRZ", "").replace(".csv", "")
-      const invoice_number = fileName.split("_")[0].replace(".csv", "")
+      const order_id = fileName.split("_")[0].slice(3);
+      const invoice_number = invoice_prefix+order_id
       const filePath = `${directoryPath}\\${fileName}`;
 
-      let order = woo_orders.find(o => o.id == order_id)
+      let order = orders.find(o => o.id == order_id)
       if (!order) {
         fs.unlinkSync(filePath)
         continue
@@ -67,22 +82,25 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
           })
           await updateCollectionStatus("invoices",{
             '$and': [{ "invoice_number": invoice_number }]
-          },{status :1})
+          },{
+            status :OrderStatuses.invoice_failed,
+            order_id: order_id,
+            invoice_data: order
+          })
+          updateInternalOrderStatus(order_id, OrderStatuses.invoice_pending)
         } else {
           //record success in mongo
           await updateCollectionStatus("invoices",{
             '$and': [{ "invoice_number": invoice_number }]
-          },{status :2})
-          
-          run['orders'].push({
+          },{
+            status :OrderStatuses.invoice_generated,
             order_id: order_id,
-            status: 1,
             invoice_data: order
           })
+          updateInternalOrderStatus(order_id, OrderStatuses.invoice_generated)
           if (invoice_number.indexOf("CAT") == 0) {
             await createOrderNote(order_id, `Invoice generated - ${invoice_number}`)
             await updateOrderStatus(order_id, "invoiced")
-
           }
         }
 
@@ -102,6 +120,7 @@ async function processFiles(driver, directoryPath, url, uploadElementLocator, bu
 
   return run;
 }
+
 
 
 module.exports = {

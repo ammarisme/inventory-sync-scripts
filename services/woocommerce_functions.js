@@ -1,7 +1,8 @@
 
 const axios = require('axios');
 const { getCollectionBy, insertDocument, upsertDocument, updateDocument } = require('../mongo_functions');
-const { WOOCOMMERCE_ORDER_REPROCESS_SCHEDULED } = require('../statuses');
+const { WOOCOMMERCE_ORDER_REPROCESS_SCHEDULED, OrderStatuses } = require('../statuses');
+const { createOrder } = require('../api');
 
 
 async function getProcessingOrders() {
@@ -46,11 +47,35 @@ async function getProcessingOrders() {
         };
   
         const response = await axios.get(url,  {headers});
+
+        const orders = response.data
+
+         //send api call to insert this record in order collection
+         orders.map(async order => {
+          await createOrder({
+            order_id : order.id,
+            invoice_number: "CAT"+order.id,
+            "status" : OrderStatuses.order_confirmed,
+          "line_items":  order.line_items,
+          "order_total": order.total,
+          "shipping_fee": order.shipping_total,
+          "selected_payment_method": {"type" : order.payment_method},
+          "payments": [],
+          "customer": {"phone" :order.billing.phone,
+          "first_name" :order.billing.first_name,
+          "last_name" :order.billing.first_name
+        }
+        });
+         })
+         
+
         return response.data;
       } catch (error) {
         throw new Error(`Failed to call API: ${error.message}`);
       }
     }
+
+     
   }
   async function getCompletedOrders(i) {
     while (true) {
