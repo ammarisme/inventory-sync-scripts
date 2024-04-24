@@ -115,10 +115,11 @@ async function entry_function(type) {
         log(error)
     }
 }
+
 //Production
 async function runJob() {
     try{
-    const schedule = '30 */1 * * *'
+    const schedule = '*/15 * * * *'
     const daraz_schedule = '*/5 * * * *'
     console.log(`start : run schedule ${schedule}`)
 
@@ -155,9 +156,7 @@ async function runJob() {
 }
 }
 
-
 runJob()
-
 
 // async function testJob() {
 //     const schedule = '30 */2 * * *'

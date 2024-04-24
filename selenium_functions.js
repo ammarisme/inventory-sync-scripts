@@ -1,4 +1,5 @@
 const { Builder, By, Key, until } = require('selenium-webdriver');
+const firefox  = require('selenium-webdriver/firefox');
 const chrome = require('selenium-webdriver/chrome');
 const { Select } = require('selenium-webdriver');
 const fs = require('fs');
@@ -30,6 +31,24 @@ function getChromeDriver(headeless){
         .build()
       return driver
     }
+  }
+
+  function getFirefoxDriver(headless) {
+    const firefoxOptions = new firefox.Options();
+    if (headless) {
+      firefoxOptions.headless();
+    }
+    firefoxOptions.addArguments("--window-size=1920,1080");
+    firefoxOptions.addArguments("--start-maximized");
+    firefoxOptions.addArguments('--disable-logging'); // Disable most GeckoDriver logging
+    firefoxOptions.addArguments('--log-level=3');     // Set minimum logging level (3: only fatal errors)
+    
+    const driver = new Builder()
+      .forBrowser('firefox')
+      .setFirefoxOptions(firefoxOptions)
+      .build();
+    
+    return driver;
   }
 
   async function donwloadStock(driver, run_id) {
@@ -103,4 +122,5 @@ async function loginStoreMate(driver) {
     getChromeDriver,
     donwloadStock,
     loginStoreMate,
+    getFirefoxDriver
   }

@@ -410,7 +410,7 @@ function readCSV(filePath){
 }
 
 function runJob() {
-  const schedule = '30 */2 * * *'
+  const schedule = '*/30 * * * *'
   console.log(`start : run schedule ${schedule}`)
   nodeSchedule.scheduleJob(schedule, function () { 
     try{

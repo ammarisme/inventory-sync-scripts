@@ -1,5 +1,4 @@
-
-const axios = require('axios');
+const axios = require('../common.modules');
 const { getCollectionBy, insertDocument, upsertDocument, updateDocument } = require('../mongo_functions');
 const { WOOCOMMERCE_ORDER_REPROCESS_SCHEDULED, OrderStatuses } = require('../statuses');
 const { createOrder } = require('../api');
