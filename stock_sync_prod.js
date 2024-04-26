@@ -10,7 +10,7 @@ const { availableParallelism } = require('os');
 
 async function main() {
   let run_id =  generateRandomNumberString();
-  console.log(`run id ${run_id}`)
+  log(`run id ${run_id}`)
 
   // Initiate storemate in selenium
   const chromeOptions = new chrome.Options();
@@ -29,29 +29,23 @@ async function main() {
   await login(driver)
 
   //download the stock report for catlitter.lk
-  await donwloadStock(driver, run_id)
+  const file_path =  `C:\\Users\\Ammar Ameerdeen\\Downloads\\location_wise_stock.csv`
+  await donwloadStock(driver, file_path)
   await driver.quit();
+  available_stock = readCSV(file_path)  
+  await fs.unlinkSync(file_path);
 
-  available_stock = readCSV(`C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)  
-  // for(SKU in available_stock){
-  //   while(true){
-  //   upsertDocument("inventory",{
-  //     sku: SKU,
-  //   },
-  //   available_stock[SKU]
-  //   );
-  //   break
-  // }
-  // }
-  // return
+ 
   let total_products = 0
   let total_updated_products = 0
   //download the product stock from woocommerce
+  log("fetching products : "+ available_stock.length)
   let products = await fetchProductsFromWoocommerce();
+  log("updating products : "+ products.length)
   for(key in products){
     const  product = products[key];
     const sku_in_stock = '"'+product["sku"]+'"';
-    const logfilename = `./logs/stock_update_log_${run_id}.csv`;
+    // const logfilename = `./logs/stock_update_log_${run_id}.csv`;
 
     const website_stock = !product["stock_quantity"] ?0 : product["stock_quantity"];
     const catlitter_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Catlitter"]
@@ -64,83 +58,84 @@ async function main() {
         case "variation":
           await UpdateStockOfProductVariation(product.parent_id, product.id, latest_stock)
 
-          fs.appendFileSync(logfilename, generateLogMessage(
-            "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
-          ), (err) => {
-            if (err) throw err;
-          });
+          // fs.appendFileSync(logfilename, generateLogMessage(
+          //   "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
+          // ), (err) => {
+          //   if (err) throw err;
+          // });
           total_updated_products++
           continue
         case "simple":
           await UpdateStockOfProduct(product.id, latest_stock)
 
-          fs.appendFileSync(logfilename, generateLogMessage(
-            "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
-          ), (err) => {
-            if (err) throw err;
-          });
+          // fs.appendFileSync(logfilename, generateLogMessage(
+          //   "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
+          // ), (err) => {
+          //   if (err) throw err;
+          // });
           total_updated_products++
           continue
         default:
-          fs.appendFileSync(logfilename, generateLogMessage(
-            "No Update", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
-          ), (err) => {
-            if (err) throw err;
-          });
+          // fs.appendFileSync(logfilename, generateLogMessage(
+          //   "No Update", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
+          // ), (err) => {
+          //   if (err) throw err;
+          // });
           continue
       }
     } else if(product.type == "variable"){
       const variable_stock = getVariableStock(product, products,available_stock)
       if (variable_stock != website_stock){
         await UpdateStockOfProduct(product.id, variable_stock)
-        fs.appendFileSync(logfilename,  generateLogMessage(
-          "Updated", product.type, product.id, product.name , "" , product.parent_id, website_stock, variable_stock , product["sku"]
-        ), (err) => {
-          if (err) throw err;
-        });
+        // fs.appendFileSync(logfilename,  generateLogMessage(
+        //   "Updated", product.type, product.id, product.name , "" , product.parent_id, website_stock, variable_stock , product["sku"]
+        // ), (err) => {
+        //   if (err) throw err;
+        // });
         total_updated_products++
         continue
       }else{
-        fs.appendFileSync(logfilename, generateLogMessage(
-          "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
-        ), (err) => {
-          if (err) throw err;
-        });
+        // fs.appendFileSync(logfilename, generateLogMessage(
+        //   "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
+        // ), (err) => {
+        //   if (err) throw err;
+        // });
         continue
       }
     }
     else if(!product["sku"] ||  !isNumber(product["sku"])){
-      fs.appendFileSync(logfilename, generateLogMessage(
-        "No SKU", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock , ""
-      ), (err) => {
-        if (err) throw err;
-      });
+      // fs.appendFileSync(logfilename, generateLogMessage(
+      //   "No SKU", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock , ""
+      // ), (err) => {
+      //   if (err) throw err;
+      // });
       continue
     }
     else if(!available_stock[sku_in_stock]){
-      fs.appendFileSync(logfilename, generateLogMessage(
-        "Error :available_stock", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, product["sku"]
-      ), (err) => {
-        if (err) throw err;
-      });
+      // fs.appendFileSync(logfilename, generateLogMessage(
+      //   "Error :available_stock", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, product["sku"]
+      // ), (err) => {
+      //   if (err) throw err;
+      // });
       continue;
     }
     else if((website_stock == latest_stock)){
-      fs.appendFileSync(logfilename, generateLogMessage(
-        "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
-      ), (err) => {
-        if (err) throw err;
-      });
+      // fs.appendFileSync(logfilename, generateLogMessage(
+      //   "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
+      // ), (err) => {
+      //   if (err) throw err;
+      // });
       continue
     }else{
-      fs.appendFileSync(logfilename, generateLogMessage(
-        "Other", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, ""
-      ), (err) => {
-        if (err) throw err;
-      });
+      // fs.appendFileSync(logfilename, generateLogMessage(
+      //   "Other", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, ""
+      // ), (err) => {
+      //   if (err) throw err;
+      // });
       continue;
     }
   }
+  log("update done")
 
   insertDocument("stock_sync",{
     run_id : run_id,
@@ -199,7 +194,7 @@ function getCurrentTime() {
 
   // Adjust format as desired (e.g., 24-hour, AM/PM)
   const formattedTime = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  console.log("Current time:", formattedTime);
+  log("Current time:", formattedTime);
 }
 
 
@@ -219,7 +214,7 @@ async function UpdateStockOfProduct(id, stockQuantity) {
       }
     });
 
-    // console.log(`Stock quantity updated successfully for ID: ${id}`);
+    // log(`Stock quantity updated successfully for ID: ${id}`);
     return
   } catch (error) {
     console.error(`Failed to update stock quantity for ID: ${id}`, error);
@@ -228,12 +223,11 @@ async function UpdateStockOfProduct(id, stockQuantity) {
 }
 
 function log(str){
-// console.log('log: ' + str)
+console.log(str)
 }
 async function UpdateStockOfProductVariation(parent_id, product_id, stockQuantity) {
   // Call the PUT API to update the stock quantity
   const apiUrl = `https://catlitter.lk/wp-json/wc/v3/products/${parent_id}/variations/${product_id}`;
-  log(apiUrl)
   const putData = {
     stock_quantity: stockQuantity
   };
@@ -246,7 +240,7 @@ async function UpdateStockOfProductVariation(parent_id, product_id, stockQuantit
       }
     });
 
-    // console.log(`Stock quantity updated successfully for SKU: ${parent_id}`);
+    // log(`Stock quantity updated successfully for SKU: ${parent_id}`);
     return;
   } catch (error) {
     console.error(`Failed to update stock quantity for SKU: ${parent_id}`, error);
@@ -258,7 +252,6 @@ async function callApi(page) {
   while(true){
   try {
     const url = 'https://catlitter.lk/wp-json/wc/v3/products?per_page=100&page=' + page;
-    log(url)
     const headers = {
       Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',
     };
@@ -266,7 +259,7 @@ async function callApi(page) {
     const response = await axios.get(url, { headers });
     return response.data;
   } catch (error) {
-console.log(error)
+log(error)
 }
 }
 }
@@ -275,7 +268,6 @@ async function getProduct(id) {
   while(true){
   try {
     const url = 'https://catlitter.lk/wp-json/wc/v3/products/' + id;
-    log(url)
     const headers = {
       Authorization: 'Basic Y2tfNDdjMzk3ZjNkYzY2OGMyY2UyZThlMzU4YjdkOWJlYjZkNmEzMTgwMjpjc19kZjk0MDdkOWZiZDVjYzE0NTdmMDEwNTY3ODdkMjFlMTAyZmUwMTJm',
     };
@@ -283,7 +275,7 @@ async function getProduct(id) {
     const response = await axios.get(url, { headers });
     return response.data;
   } catch (error) {
-    console.log(error)
+    log(error)
   }
 }
 }
@@ -322,7 +314,7 @@ async function fetchProductsFromWoocommerce() {
       // }
     }
   } catch (error) {
-    console.log(error)
+    log(error)
   }
   return products;
 }
@@ -343,7 +335,7 @@ async function login(driver) {
   await driver.wait(until.urlIs('https://app.storematepro.lk/home'), 10000);
 }
 
-async function donwloadStock(driver, run_id) {
+async function donwloadStock(driver, file_path) {
   try {
 
     // Step 6: Go to the stock report page
@@ -368,18 +360,19 @@ async function donwloadStock(driver, run_id) {
         try{
           childElements[0].click();
           await driver.sleep(1000);
-          fs.renameSync("C:\\Users\\Ammar Ameerdeen\\Downloads\\Location Wise Stock Report - PET  CO.csv", `C:\\Users\\Ammar Ameerdeen\\Downloads\\${run_id}.csv`)
+          fs.renameSync("C:\\Users\\Ammar Ameerdeen\\Downloads\\Location Wise Stock Report - PET  CO.csv",
+          file_path)
           log("downloaded :  location_wise_stock" )
           break;
         }catch(error){
-          console.log(error)
+          log(error)
         }
         
       }
       
     }
   } catch (error) {
-    console.log(error)
+    log(error)
   }finally{
   }
 }
@@ -411,7 +404,7 @@ function readCSV(filePath){
 
 function runJob() {
   const schedule = '*/30 * * * *'
-  console.log(`start : run schedule ${schedule}`)
+  log(`start : run schedule ${schedule}`)
   nodeSchedule.scheduleJob(schedule, function () { 
     try{
     getCurrentTime()

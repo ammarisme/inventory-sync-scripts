@@ -14,6 +14,7 @@ async function createOrder(order){
 
 async function fetchConfirmedOrders() {
   try {
+    
     const response = await fetch(API_BASE_URL+'/orders/by-status/order_confirmed');
     if (!response.ok) {
       throw new Error('Failed to fetch orders');

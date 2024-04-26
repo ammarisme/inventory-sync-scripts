@@ -114,7 +114,7 @@ function generateCSVForOrder(order) {
 
 async function runJob() {
   try {
-    const schedule = '*/5 * * * *';
+    const schedule = '*/6 * * * *';
     console.log(`start : run schedule ${schedule}`);
     getCurrentTime();
     await sync();
