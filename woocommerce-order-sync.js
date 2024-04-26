@@ -8,8 +8,8 @@ const { getProcessingOrders, getInvoiceGenerateOrders, getOrdersByStatus } = req
 async function entry_function() {
     try {
     
-    const processing_orders = await getOrdersByStatus("processing", 1)
-    if (processing_orders.length == 0) {
+    const processing_orders = await getOrdersByStatus("invoiced", 1)
+    if (processing_orders.  length == 0) {
         log("no orders to process")
     }else{
         //create new orders
@@ -19,7 +19,7 @@ async function entry_function() {
                 total += item.quantity * item.price;
             });
             let line_items = order.line_items.map((item) => {
-                return {
+                return {    
                     product_name: item.name,
                     sku: item.sku,
                     quantity: item.quantity,
@@ -30,8 +30,8 @@ async function entry_function() {
             let createOrderDto = {
                 order_id: order.number,
                 invoice_number: "CAT" + order.number,
-                status: OrderStatuses.order_confirmed,
-                status_history: [{ status: OrderStatuses.order_confirmed, status_remark: "" }],
+                status: OrderStatuses.invoice_generated,
+                status_history: [{ status: OrderStatuses.invoice_generated, status_remark: "" }],
                 line_items: line_items,
                 order_total: total,
                 shipping_fee: order.shipping_total,
@@ -41,16 +41,19 @@ async function entry_function() {
                     last_name: order.billing.last_name,
                     phone: order.billing.phone,
                     email: order.billing.email,
-                    address1: order.billing.address_1,
-                    address2: order.billing.address_2,
-                    state: order.billing.state
+                    address1: order.shipping.address_1,
+                    address2: order.shipping.address_2,
+                    state: order.shipping.state,
+                    city: order.shipping.city
                 },
+
             };
 
             await createOrder(createOrderDto)
         }
     }
 
+    return
     const invoice_generate_orders = await getOrdersByStatus("invoice-generate", 1)
     if (invoice_generate_orders.length == 0) {
         log("no orders to process")
