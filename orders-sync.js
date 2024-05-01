@@ -24,7 +24,7 @@ class Sale {
 async function main(run_id, processing_orders, invoice_prefix) {
     const driver2 = getChromeDriver(true) // go headless chrom
     // Replace these with your specific values
-    const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\github\\store-sync\\invoices';
+    const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\github\\store-sync-production\\invoices';
     const url = 'https://app.storematepro.lk/import-sales';
     const uploadElementLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[1]/div/input'); // Replace with actual locator
     const buttonLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[2]/button'); // Replace with actual locator

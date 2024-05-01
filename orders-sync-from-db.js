@@ -18,7 +18,7 @@ async function sync() {
 
     if (processing_orders) {
       const driver = getChromeDriver(true); // Headless Chrome
-      const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\github\\store-sync\\test-invoices';
+      const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\github\\store-sync-production\\test-invoices';
       const url = 'https://app.storematepro.lk/import-sales';
       const uploadElementLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[1]/div/input');
       const buttonLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[2]/button');

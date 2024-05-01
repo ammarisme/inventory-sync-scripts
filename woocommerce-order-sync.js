@@ -19,7 +19,7 @@ async function entry_function() {
                 total += item.quantity * item.price;
             });
             let line_items = order.line_items.map((item) => {
-                return {
+                return {    
                     product_name: item.name,
                     sku: item.sku,
                     quantity: item.quantity,
@@ -50,7 +50,6 @@ async function entry_function() {
             await createOrder(createOrderDto)
         }
     }
-
     const invoice_generate_orders = await getOrdersByStatus("invoice-generate", 1)
     if (invoice_generate_orders.length == 0) {
         log("no orders to process")
