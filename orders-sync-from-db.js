@@ -37,6 +37,10 @@ async function sync() {
 
 async function processOrders(driver, url, uploadElementLocator, buttonLocator, finalSubmit, orders,directoryPath) {
   for (const order of orders) {
+    if(!order.status_history.filter(s => s.status === "invoice_generated").length == 0){
+      console.log("Invoice already generated once.!")
+      continue;
+    }
     try {
       console.log(`Processing order: ${order.order_id}`);
 
@@ -75,11 +79,16 @@ async function processOrders(driver, url, uploadElementLocator, buttonLocator, f
           console.log('Alert element exists');
           //call api and update order status as invoice-pending
           await updateOrderStatusAPI(order.order_id, OrderStatuses.invoice_pending, alertText);
-          await updateOrderStatus(order.order_id, "invoice-pending")
+          if (order.invoice_number.startsWith("CAT")) {
+            await updateOrderStatus(order.order_id, "invoice-pending")
+          }
+          
         } else {
           //call api and update order status as invoiced
           await updateOrderStatusAPI(order.order_id, OrderStatuses.invoice_generated, "");
-          await updateOrderStatus(order.order_id, "invoiced")
+          if (order.invoice_number.startsWith("CAT")) {
+            await updateOrderStatus(order.order_id, "invoiced");
+          }
         }
 
       // Delete the CSV file after processing
