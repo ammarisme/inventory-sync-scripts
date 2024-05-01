@@ -8,7 +8,7 @@ const { getProcessingOrders, getInvoiceGenerateOrders, getOrdersByStatus } = req
 async function entry_function() {
     try {
     
-    const processing_orders = await getOrdersByStatus("invoiced", 1)
+    const processing_orders = await getOrdersByStatus("init-test", 1)
     if (processing_orders.  length == 0) {
         log("no orders to process")
     }else{
