@@ -54,8 +54,6 @@ async function entry_function() {
             await createOrder(createOrderDto)
         }
     }
-
-    return
     const invoice_generate_orders = await getOrdersByStatus("invoice-generate", 1)
     if (invoice_generate_orders.length == 0) {
         log("no orders to process")
