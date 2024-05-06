@@ -8,7 +8,7 @@ const { getProcessingOrders, getInvoiceGenerateOrders, getOrdersByStatus } = req
 async function entry_function() {
     try {
     
-    const processing_orders = await getOrdersByStatus("init-test", 1)
+    const processing_orders = await getOrdersByStatus("processing", 1)
     if (processing_orders.  length == 0) {
         log("no orders to process")
     }else{
@@ -30,8 +30,8 @@ async function entry_function() {
             let createOrderDto = {
                 order_id: order.number,
                 invoice_number: "CAT" + order.number,
-                status: OrderStatuses.invoice_generated,
-                status_history: [{ status: OrderStatuses.invoice_generated, status_remark: "" }],
+                status: OrderStatuses.order_confirmed,
+                status_history: [{ status: OrderStatuses.order_confirmed, status_remark: "" }],
                 line_items: line_items,
                 order_total: total,
                 shipping_fee: order.shipping_total,
