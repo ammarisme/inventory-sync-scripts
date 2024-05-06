@@ -26,8 +26,12 @@ async function entry_function() {
                     unit_price: item.price
                 };
             });    
+
+            const lastCustomField = order.meta_data.reverse().find(o => o.key === "custom_field");
+            
             // Create order object
             let createOrderDto = {
+                source:  lastCustomField.value ?  lastCustomField.value : "website",
                 order_id: order.number,
                 invoice_number: "CAT" + order.number,
                 status: OrderStatuses.order_confirmed,
