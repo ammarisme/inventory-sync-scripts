@@ -31,7 +31,7 @@ async function entry_function() {
             
             // Create order object
             let createOrderDto = {
-                source:  lastCustomField.value ?  lastCustomField.value : "website",
+                source:  lastCustomField ?  lastCustomField.value : "website",
                 order_id: order.number,
                 invoice_number: "CAT" + order.number,
                 status: OrderStatuses.order_confirmed,
@@ -41,14 +41,14 @@ async function entry_function() {
                 shipping_fee: order.shipping_total,
                 selected_payment_method: { method: order.payment_method },
                 customer: {
-                    first_name: order.billing.first_name,
-                    last_name: order.billing.last_name,
-                    phone: order.billing.phone,
-                    email: order.billing.email,
-                    address1: order.shipping.address_1,
-                    address2: order.shipping.address_2,
-                    state: order.shipping.state,
-                    city: order.shipping.city
+                    first_name: order.shipping.first_name !=''?order.shipping.first_name??'' :  order.billing.first_name??'',
+                    last_name: order.shipping.last_name != '' ? order.shipping.last_name??'' : order.billing.last_name??'',
+                    phone: order.shipping.phone != '' ? order.shipping.phone??'' : order.billing.phone??'',
+                    email: order.shipping.email != '' ? order.shipping.email??'' : order.billing.email??'',
+                    address1: order.shipping.address_1??'',
+                    address2: order.shipping.address2??'',
+                    state: order.shipping.state??'',
+                    city: order.shipping.city??''
                 },
 
             };
