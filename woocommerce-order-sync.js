@@ -46,7 +46,7 @@ async function entry_function() {
                     phone: order.shipping.phone != '' ? order.shipping.phone??'' : order.billing.phone??'',
                     email: order.shipping.email != '' ? order.shipping.email??'' : order.billing.email??'',
                     address1: order.shipping.address_1??'',
-                    address2: order.shipping.address2??'',
+                    address2: order.shipping.address_2??'',
                     state: order.shipping.state??'',
                     city: order.shipping.city??''
                 },
