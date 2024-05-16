@@ -1,26 +1,32 @@
-# Use an official Node.js runtime as a parent image
-FROM node:latest
+FROM ubuntu:latest
 
-# Install Firefox and GeckoDriver for Selenium
-RUN apt-get update && \
-    apt-get install -y firefox-esr && \
-    apt-get clean
+#update environment
+RUN apt-get -y upgrade
+RUN apt-get -y update
+RUN apt-get -y --with-new-pkgs upgrade
+RUN apt-get -y autoremove
 
-# Download the latest version of GeckoDriver and install it to /usr/local/bin
-RUN apt-get install -y curl && \
-    curl -sSL https://github.com/mozilla/geckodriver/releases/download/v0.30.0/geckodriver-v0.30.0-linux64.tar.gz | tar -xz -C /usr/local/bin
+#install curl
+RUN apt-get -y install curl wget
 
-# Set the working directory in the container to /app
+#install chrome
+RUN apt-get -y install lsb-release libappindicator3-1
+RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN dpkg -i google-chrome-stable_current_amd64.deb || true
+RUN apt-get -fy install
+
+RUN apt-get -y install npm
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
+#install node
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash -
+RUN apt-get -fy install nodejs
+RUN node --version
+RUN npm --version
 
-COPY . /app
-# Install any needed dependencies specified in package.json
+COPY . .
+
+
 RUN npm install
-
-# Expose the port the app runs on
-EXPOSE 3001
-
-# Run the node server
-CMD ["node", "orders-sync-from-db.js"]
+RUN chmod +x woocommerce-order-sync.js
+CMD  ["node", "./woocommerce-order-sync.js"]
