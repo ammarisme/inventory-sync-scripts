@@ -29,4 +29,5 @@ COPY . .
 
 RUN npm install
 RUN chmod +x woocommerce-order-sync.js
-CMD  ["node", "./woocommerce-order-sync.js"]
+RUN chmod +x orders-sync-from-db.js
+CMD ["node", "./woocommerce-order-sync.js"]
