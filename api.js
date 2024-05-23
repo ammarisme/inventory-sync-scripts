@@ -12,15 +12,14 @@ async function createOrder(order){
 }
 
 
-async function fetchConfirmedOrders() {
+async function fetchUnInvoicedOrders() {
   try {
     
-    const response = await fetch(API_BASE_URL+'/orders/by-status/order_confirmed');
+    const response = await fetch(API_BASE_URL+'/orders/uninvoiced');
     if (!response.ok) {
       throw new Error('Failed to fetch orders');
     }
     const orders = await response.json();
-    console.log('Confirmed Orders:', orders);
     return orders;
   } catch (error) {
     console.error('Error fetching confirmed orders:', error.message);
@@ -68,5 +67,5 @@ async function updateOrderStatusAPI(orderId, newStatus, status_remark) {
 }
 
 module.exports = {
-    createOrder, fetchConfirmedOrders, updateOrderStatusAPI,fetchOldInvoice
+    createOrder, fetchUnInvoicedOrders, updateOrderStatusAPI,fetchOldInvoice
 }

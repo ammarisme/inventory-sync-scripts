@@ -4,19 +4,22 @@ const {Select, Builder, By, Key, until } = require('selenium-webdriver');
 
 const { loginStoreMate, getChromeDriver } = require('./selenium_functions.js');
 const { OrderStatuses } = require('./statuses.js');
-const { fetchConfirmedOrders, updateOrderStatusAPI } = require('./api.js');
+const { fetchConfirmedOrders, updateOrderStatusAPI, fetchUnInvoicedOrders } = require('./api.js');
 const { log, getCurrentTime } = require('./common/utils.js');
 const { updateOrderStatus } = require('./services/woocommerce_functions.js');
 
 async function sync() {
   try {
-    processing_orders = await fetchConfirmedOrders();
-    if (processing_orders == 0) {
+    uninvoicd_orders = await fetchUnInvoicedOrders();
+    if (uninvoicd_orders == 0) {
       log("no orders to process");
       return;
     }
 
-    if (processing_orders) {
+    uninvoicd_orders = uninvoicd_orders.filter(a => a.status != "invoice_pending");
+    console.log('Invoice Orders:', uninvoicd_orders);
+
+    if (uninvoicd_orders && uninvoicd_orders.length > 0 ) {
       const driver = getChromeDriver(true); // Headless Chrome
       const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\github\\store-sync-production\\test-invoices';
       const url = 'https://app.storematepro.lk/import-sales';
@@ -25,8 +28,10 @@ async function sync() {
       const finalSubmit = By.xpath('//*[@id="import_sale_form"]/div[3]/div/button');
 
       await loginStoreMate(driver);
-      await processOrders(driver, url, uploadElementLocator, buttonLocator, finalSubmit, processing_orders, directoryPath)
+      await processOrders(driver, url, uploadElementLocator, buttonLocator, finalSubmit, uninvoicd_orders, directoryPath)
       driver.quit();
+    }{
+      console.log("no invoicable orders")
     }
 
   } catch (error) {
