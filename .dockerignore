@@ -1,5 +1,3 @@
 node_modules
+logs
 backup
-invoices
-invoices_csv
-test-invoices
