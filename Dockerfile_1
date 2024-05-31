@@ -1,0 +1,48 @@
+FROM ubuntu:latest
+
+# Ensure directory exists and has correct permissions
+RUN mkdir -p /var/lib/apt/lists/partial && \
+    chmod -R 755 /var/lib/apt/lists
+
+# Update environment
+RUN apt-get -y update && apt-get -y upgrade
+
+# Install curl, wget, gnupg and other utilities
+RUN apt-get -y install curl wget gnupg
+
+# Add Google's official GPG key
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+
+# Add Google Chrome repository
+RUN sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+
+# Update and install Chrome and other dependencies
+RUN apt-get -y update && apt-get -y install google-chrome-stable
+
+# Install Node.js and npm
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash -
+RUN apt-get -y install nodejs
+RUN apt-get -y install npm
+
+# Set the working directory
+WORKDIR /app
+
+# Copy application code
+COPY . .
+
+# Install npm dependencies
+RUN npm install
+
+# Make scripts executable
+RUN chmod +x woocommerce-order-sync.js
+RUN chmod +x orders-sync-from-db.js
+
+# Chrome options
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV CHROME_PATH=/usr/bin/google-chrome
+
+# Verify Chrome installation
+RUN google-chrome-stable --version
+
+# Entry point
+CMD ["node", "./orders-sync-from-db.js"]

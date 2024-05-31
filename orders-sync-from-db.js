@@ -21,7 +21,7 @@ async function sync() {
 
     if (uninvoicd_orders && uninvoicd_orders.length > 0 ) {
       const driver = getChromeDriver(true); // Headless Chrome
-      const directoryPath = 'C:\\Users\\Ammar Ameerdeen\\Desktop\\github\\store-sync-production\\test-invoices';
+      const directoryPath = '/app/test-invoices';
       const url = 'https://app.storematepro.lk/import-sales';
       const uploadElementLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[1]/div/input');
       const buttonLocator = By.xpath('/html/body/div[3]/div[1]/section[2]/div[1]/div/div/div/form/div[1]/div/div[2]/button');
@@ -51,7 +51,7 @@ async function processOrders(driver, url, uploadElementLocator, buttonLocator, f
 
       generateCSVForOrder(order)
       const fileName = `${order.invoice_number}.csv`;
-      const filePath = `${directoryPath}\\${fileName}`;
+      const filePath = `${directoryPath}/${fileName}`;
 
 
       // Proceed with processing
@@ -122,7 +122,7 @@ function generateCSVForOrder(order) {
     const csvString = csvContent.join('\n');
 
     // Write CSV to file
-    fs.writeFileSync(`.\\test-invoices\\${order.invoice_number}.csv`, csvString);
+    fs.writeFileSync(`./test-invoices/${order.invoice_number}.csv`, csvString);
     console.log(`${order.invoice_number}.csv file created successfully!`);
 }
 

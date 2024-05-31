@@ -42,97 +42,37 @@ async function main() {
   log("fetching products : "+ available_stock.length)
   let products = await fetchProductsFromWoocommerce();
   log("updating products : "+ products.length)
-  for(key in products){
-    const  product = products[key];
-    const sku_in_stock = '"'+product["sku"]+'"';
-    // const logfilename = `./logs/stock_update_log_${run_id}.csv`;
+  for (key in products) {
+    const product = products[key];
+    const sku_in_stock = `"${product["sku"]}"`;
+  
+    const website_stock = product["stock_quantity"] || 0;
+    const catlitter_stock = available_stock[sku_in_stock]?.["Catlitter"] || 0;
+    const wh_stock = available_stock[sku_in_stock]?.["Warehouse"] || 0;
+  
+    let latest_stock = Number(catlitter_stock) + Number(wh_stock) - 3;
+    latest_stock = latest_stock > 0 ? latest_stock : 0;
 
-    const website_stock = !product["stock_quantity"] ?0 : product["stock_quantity"];
-    const catlitter_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Catlitter"]
-    const wh_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Warehouse"]
-
-    let latest_stock = Number(catlitter_stock) + Number(wh_stock);
-    if((product.type == "simple" || product.type == "variation") &&  available_stock[sku_in_stock] && product["sku"] > 0 
-      && (website_stock != latest_stock)){
-      switch (product.type) {
-        case "variation":
-          await UpdateStockOfProductVariation(product.parent_id, product.id, latest_stock)
-
-          // fs.appendFileSync(logfilename, generateLogMessage(
-          //   "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
-          // ), (err) => {
-          //   if (err) throw err;
-          // });
-          total_updated_products++
-          continue
-        case "simple":
-          await UpdateStockOfProduct(product.id, latest_stock)
-
-          // fs.appendFileSync(logfilename, generateLogMessage(
-          //   "Updated", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
-          // ), (err) => {
-          //   if (err) throw err;
-          // });
-          total_updated_products++
-          continue
-        default:
-          // fs.appendFileSync(logfilename, generateLogMessage(
-          //   "No Update", product.type, product.id, product.name, available_stock[sku_in_stock]["Product Name"], product.parent_id, website_stock, latest_stock, product["sku"]
-          // ), (err) => {
-          //   if (err) throw err;
-          // });
-          continue
-      }
-    } else if(product.type == "variable"){
-      const variable_stock = getVariableStock(product, products,available_stock)
-      if (variable_stock != website_stock){
-        await UpdateStockOfProduct(product.id, variable_stock)
-        // fs.appendFileSync(logfilename,  generateLogMessage(
-        //   "Updated", product.type, product.id, product.name , "" , product.parent_id, website_stock, variable_stock , product["sku"]
-        // ), (err) => {
-        //   if (err) throw err;
-        // });
-        total_updated_products++
-        continue
-      }else{
-        // fs.appendFileSync(logfilename, generateLogMessage(
-        //   "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
-        // ), (err) => {
-        //   if (err) throw err;
-        // });
-        continue
-      }
-    }
-    else if(!product["sku"] ||  !isNumber(product["sku"])){
-      // fs.appendFileSync(logfilename, generateLogMessage(
-      //   "No SKU", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock , ""
-      // ), (err) => {
-      //   if (err) throw err;
-      // });
-      continue
-    }
-    else if(!available_stock[sku_in_stock]){
-      // fs.appendFileSync(logfilename, generateLogMessage(
-      //   "Error :available_stock", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, product["sku"]
-      // ), (err) => {
-      //   if (err) throw err;
-      // });
+  
+    if (!product["sku"] || !isNumber(product["sku"])) {
       continue;
     }
-    else if((website_stock == latest_stock)){
-      // fs.appendFileSync(logfilename, generateLogMessage(
-      //   "Stock in Sync", product.type, product.id, product.name , available_stock[sku_in_stock]["Product Name"] , product.parent_id, website_stock, latest_stock, product["sku"]
-      // ), (err) => {
-      //   if (err) throw err;
-      // });
-      continue
-    }else{
-      // fs.appendFileSync(logfilename, generateLogMessage(
-      //   "Other", product.type, product.id, product.name , "" , product.parent_id, website_stock, latest_stock, ""
-      // ), (err) => {
-      //   if (err) throw err;
-      // });
-      continue;
+  
+    if (product.type === "simple" || product.type === "variation") {
+      if (product["sku"] > 0 && website_stock != latest_stock) {
+        if (product.type === "variation") {
+          await UpdateStockOfProductVariation(product.parent_id, product.id, latest_stock);
+        } else {
+          await UpdateStockOfProduct(product.id, latest_stock);
+        }
+        total_updated_products++;
+      }
+    } else if (product.type === "variable") {
+      const variable_stock = getVariableStock(product, products, available_stock);
+      if (variable_stock != website_stock) {
+        await UpdateStockOfProduct(product.id, variable_stock);
+        total_updated_products++;
+      }
     }
   }
   log("update done")
@@ -162,7 +102,8 @@ function getVariableStock(varproduct, products, available_stock){
     const catlitter_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Catlitter"]
     const wh_stock = !available_stock[sku_in_stock]?0:available_stock[sku_in_stock]["Warehouse"]
 
-    stock += (Number(catlitter_stock)+Number(wh_stock))
+    let variation_stock = (Number(catlitter_stock)+Number(wh_stock)) - 3
+    stock +=  (variation_stock > 0 ? variation_stock : 0);
 
   }
 }

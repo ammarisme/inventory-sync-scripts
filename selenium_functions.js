@@ -11,7 +11,13 @@ function getChromeDriver(headeless){
     if(headeless){
       const chromeOptions = new chrome.Options()
       chromeOptions.addArguments('--headless')
-      chromeOptions.addArguments("--window-size=1920,1080")
+      chromeOptions.addArguments('--no-sandbox')
+      chromeOptions.addArguments('--disable-dev-shm-usage')
+      chromeOptions.addArguments('--disable-gpu')
+      chromeOptions.addArguments('--window-size=1280x800')
+      chromeOptions.addArguments('--disable-setuid-sandbox')
+      chromeOptions.addArguments('--remote-debugging-port=9222')
+      // chromeOptions.addArguments("--window-size=1920,1080")
       chromeOptions.addArguments("--start-maximized")
       chromeOptions.addArguments('--download-directory="C:\\Users\\Ammar Ameerdeen\\Downloads"')
       chromeOptions.addArguments('--disable-logging'); // Disable most ChromeDriver logging
