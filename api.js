@@ -36,7 +36,7 @@ async function updateTrackingData(order_id, status, revenue_status, tracking_dat
       tracking_data: tracking_data
     };
 
-    console.log(payload)
+    // console.log(payload)
     const response = await fetch(API_BASE_URL + '/orders/update-tracking-data', {
       method: 'PUT',
       headers: {

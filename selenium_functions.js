@@ -16,7 +16,7 @@ function getChromeDriver(headeless){
       chromeOptions.addArguments('--disable-gpu')
       chromeOptions.addArguments('--window-size=1280x800')
       chromeOptions.addArguments('--disable-setuid-sandbox')
-      chromeOptions.addArguments('--remote-debugging-port=9222')
+      // chromeOptions.addArguments('--remote-debugging-port=9222')
       // chromeOptions.addArguments("--window-size=1920,1080")
       chromeOptions.addArguments("--start-maximized")
       chromeOptions.addArguments('--download-directory="C:\\Users\\Ammar Ameerdeen\\Downloads"')
@@ -31,6 +31,7 @@ function getChromeDriver(headeless){
       const chromeOptions = new chrome.Options()
       chromeOptions.addArguments('--disable-logging'); // Disable most ChromeDriver logging
       chromeOptions.addArguments('--log-level=3');     // Set minimum logging level (3: only fatal errors)
+      chromeOptions.addArguments("--start-maximized")
       const driver = new Builder()
         .forBrowser('chrome')
         .setChromeOptions(chromeOptions)
@@ -118,15 +119,28 @@ async function loginStoreMate(driver) {
   
       // Step 5: Wait until redirected to the home page
       await driver.wait(until.urlIs('https://app.storematepro.lk/home'), 1000);
+
+      const cookies = await driver.manage().getCookies();
+      return cookies;
   
     } catch (error) {
       console.log(error)
     }
+  }
+  function extractCookies(cookies) {
+    const cookieMap = {};
+    cookies.forEach(cookie => {
+      if (cookie.name === 'XSRF-TOKEN' || cookie.name === 'storemate_pro_session') {
+        cookieMap[cookie.name] = cookie.value;
+      }
+    });
+    return cookieMap;
   }
 
   module.exports = {
     getChromeDriver,
     donwloadStock,
     loginStoreMate,
-    getFirefoxDriver
+    getFirefoxDriver,
+    extractCookies
   }

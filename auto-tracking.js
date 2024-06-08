@@ -25,10 +25,10 @@ async function entry_function() {
         // get all pending tracking orders.
         // const orders = (await fetchOrdersByOrderStatusFromDBs("order_confirmed"))??[];
         const shipped_orders = (await fetchOrdersByOrderStatusFromDBs("shipped"))??[];
-        const delivered_orders = (await fetchOrdersByOrderStatusFromDBs("delivered"))??[];
+        // const delivered_orders = (await fetchOrdersByOrderStatusFromDBs("delivered"))??[];
         const invoice_generated_orders = (await fetchOrdersByOrderStatusFromDBs("invoice_generated"))??[];
         const invoice_pending_orders = (await fetchOrdersByOrderStatusFromDBs("invoice_pending"))??[];
-        const orders = invoice_pending_orders.concat(invoice_generated_orders).concat(shipped_orders).concat(delivered_orders);
+        const orders = shipped_orders.concat(invoice_generated_orders).concat(invoice_pending_orders)
 
 
         const dex_orders = orders.filter(order => order.courier_id === "lk-dex" & order.tracking_number != undefined && order.tracking_number != '');
@@ -58,6 +58,7 @@ async function entry_function() {
                 continue;
             }
 
+            console.log("Fetching Tracking "+order.order_id +" - "+order.tracking_number)
             const trackin_data = await getTrackingDetails(driver);
             if(trackin_data.length == 0){
                 console.log( order.order_id + " - " + "Dex - Tracking failed  - "+order.status +" - "+order.selected_payment_method.method)
@@ -66,11 +67,14 @@ async function entry_function() {
 
             const status = getTrackingStatus(order, trackin_data)
             const revenue_status = getRevenueStatus(order, trackin_data)
-            console.log( order.order_id + " - " + "Dex - "+trackin_data[0].status + "- "+order.status +" - "+order.selected_payment_method.method+" - " + revenue_status)
-
-            await updateTrackingData(order.order_id, status, revenue_status, trackin_data);
-
-            //clear the search bar
+            if(status != order.status || (order.tracking_data && trackin_data && trackin_data.length != order.tracking_data.length)){
+                console.log( order.order_id + " - " + "Dex - "+trackin_data[0].status + "- "+order.status +' -> '+status+ " - "+trackin_data.length+ ' <- '+order.tracking_data.length+' - method : '+order.selected_payment_method.method+" - " + revenue_status )
+                if(status){
+                    await updateTrackingData(order.order_id, status, revenue_status, trackin_data);
+                }
+            }else{
+                console.log( order.order_id + " - " + "Dex - "+trackin_data[0].status + "- "+order.status +" - "+order.selected_payment_method.method+" - " + revenue_status + ' - No update to status' )
+            }
         }
         await driver.quit();
 
@@ -126,7 +130,7 @@ async function getTrackingDetails(driver) {
     // Wait for the timeline container to load
     await driver.wait(
       async () => (await driver.findElements(By.css('.timeline .row-item'))).length > 0,
-      10000,
+      20000,
       'Timeline container not found'
     );
 
@@ -289,19 +293,32 @@ function getRevenueStatus(order,tracking_data ){
 //Production
 async function runJob() {
     try{
-    const schedule = '*/12 * * * *'
-    console.log(`start : run schedule ${schedule}`)
-    getCurrentTime()
-    await entry_function();
-    nodeSchedule.scheduleJob(schedule, async function () {
-        try {
-            getCurrentTime()
+        const midnightSchedule = '0 0 * * *';  // Runs at midnight (12:00 AM)
+        const noonSchedule = '0 12 * * *';    // Runs at noon (12:00 PM)
+        console.log(`Start: run schedule ${midnightSchedule}`);
+        console.log(`Start: run schedule ${noonSchedule}`);
+        getCurrentTime();
+        await entry_function();
+    
+        nodeSchedule.scheduleJob(midnightSchedule, async function () {
+          try {
+            getCurrentTime();
             await entry_function();
-        } catch (error) {
-            log(error)
-            log("---------------------------------------------------------------")
-        }
-    })
+          } catch (error) {
+            log(error);
+            log("---------------------------------------------------------------");
+          }
+        });
+    
+        nodeSchedule.scheduleJob(noonSchedule, async function () {
+          try {
+            getCurrentTime();
+            await entry_function();
+          } catch (error) {
+            log(error);
+            log("---------------------------------------------------------------");
+          }
+        });
 }catch(error){}
 }
 

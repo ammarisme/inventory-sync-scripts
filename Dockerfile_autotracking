@@ -30,7 +30,8 @@ COPY . .
 
 # Install dependencies
 RUN npm install
-RUN chmod +x stock_sync_prod.js
+RUN chmod +x woocommerce-order-sync.js
+RUN chmod +x orders-sync-from-db.js
 
 # Chrome options
 ENV CHROME_BIN=/usr/bin/google-chrome
@@ -40,4 +41,4 @@ ENV CHROME_PATH=/usr/bin/google-chrome
 RUN google-chrome-stable --version
 
 # Entry point
-CMD ["node", "./stock_sync_prod.js"]
+CMD ["node", "./orders-sync-from-db.js"]

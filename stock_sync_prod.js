@@ -7,35 +7,26 @@ const { url } = require('inspector');
 const nodeSchedule = require('node-schedule');
 const {insertDocument, updateDocument, getCollectionBy, upsertDocument} = require('./mongo_functions.js');
 const { availableParallelism } = require('os');
+const { loginStoreMate, getChromeDriver } = require('./selenium_functions.js');
 
 async function main() {
   let run_id =  generateRandomNumberString();
   log(`run id ${run_id}`)
 
-  // Initiate storemate in selenium
-  const chromeOptions = new chrome.Options();
-  // chromeOptions.addArguments('--headless');
-  // chromeOptions.addArguments("--window-size=1920,1080")
-  // chromeOptions.addArguments("--start-maximized")
-  // chromeOptions.addArguments('--download-directory="C:\\Users\\Ammar Ameerdeen\\Downloads"');
-
-  const driver = new Builder()
-    .forBrowser('chrome')
-    .setChromeOptions(chromeOptions)
-    .build();
-
+  const driver = getChromeDriver(true); // Headless Chrome
  // Login to storemate
   log("initiating storemate automation")
-  await login(driver)
+  await loginStoreMate(driver)
 
   //download the stock report for catlitter.lk
-  const file_path =  `C:\\Users\\Ammar Ameerdeen\\Downloads\\location_wise_stock.csv`
-  await donwloadStock(driver, file_path)
-  await driver.quit();
+  const file_path =  `./location_wise_stock.csv`
+  await downloadStock(driver,file_path)
+  // await driver.quit();
+
+  //return
   available_stock = readCSV(file_path)  
   await fs.unlinkSync(file_path);
 
- 
   let total_products = 0
   let total_updated_products = 0
   //download the product stock from woocommerce
@@ -86,6 +77,8 @@ async function main() {
   
   log("completed")
 }
+
+
 function isNumber(string) {
   const numberRegex = /^\d+$/;
   return numberRegex.test(string);
@@ -276,45 +269,51 @@ async function login(driver) {
   await driver.wait(until.urlIs('https://app.storematepro.lk/home'), 10000);
 }
 
-async function donwloadStock(driver, file_path) {
+async function downloadStock(driver, file_path) {
   try {
-
-    // Step 6: Go to the stock report page
+    // Step 1: Go to the stock report page
     await driver.get('https://app.storematepro.lk/reports/location-wise-stock-reports');
-
     await driver.sleep(5000);
 
+    // Step 2: Set the table length to display all rows
     const pageLengthDropdown = await driver.findElement(By.name('location_stock_table_length'));
     const pageLengthSelect = new Select(pageLengthDropdown);
     await pageLengthSelect.selectByValue('-1');
-
-    
-    // Find the parent div with class "dt-buttons btn-group"
-    const parentDiv = await driver.findElement(By.className('dt-buttons btn-group'));
-
-    // Find all child elements of the parent div
-    const childElements = await parentDiv.findElements(By.xpath('./*'));
     await driver.sleep(5000);
-    // Click the first child element
-    if (childElements.length > 0) {      
-      while(true){
-        try{
-          childElements[0].click();
-          await driver.sleep(1000);
-          fs.renameSync("C:\\Users\\Ammar Ameerdeen\\Downloads\\Location Wise Stock Report - PET  CO.csv",
-          file_path)
-          log("downloaded :  location_wise_stock" )
-          break;
-        }catch(error){
-          log(error)
-        }
-        
-      }
-      
+
+    // Step 3: Extract the table header
+    const headers = await driver.findElements(By.css('#location_stock_table thead th'));
+    const headerTexts = [];
+    for (const header of headers) {
+      headerTexts.push(await header.getText());
     }
+
+    // Step 4: Extract the table rows
+    const rows = await driver.findElements(By.css('#location_stock_table tbody tr'));
+    const rowData = [];
+    for (const row of rows) {
+      const cells = await row.findElements(By.css('td'));
+      const cellTexts = [];
+      for (const cell of cells) {
+        cellTexts.push(await cell.getText());
+      }
+      rowData.push(cellTexts);
+    }
+
+    // Step 5: Convert data to CSV format
+    const csvData = [headerTexts.join(',')];
+    rowData.forEach(row => {
+      csvData.push(row.join(','));
+    });
+    const csvContent = csvData.join('\n');
+
+    // Step 6: Save CSV to file
+    fs.writeFileSync(file_path, csvContent);
+    console.log('Downloaded and saved the stock report as CSV.' + file_path);
   } catch (error) {
-    log(error)
-  }finally{
+    console.error('Error downloading the stock report:', error);
+  } finally {
+    await driver.quit();
   }
 }
 
@@ -343,19 +342,23 @@ function readCSV(filePath){
   return groupedData;
 }
 
+
 function runJob() {
-  const schedule = '*/30 * * * *'
-  log(`start : run schedule ${schedule}`)
-  nodeSchedule.scheduleJob(schedule, function () { 
-    try{
-    getCurrentTime()
-    main()
-    }catch(error){
-      log(error)
-      log("---------------------------------------------------------------")
+  // Schedule the job to run every 30 minutes from 6 AM to 10 PM
+  const schedule = '0 6-22 * * *';  // Cron expression for every 30 minutes from 6 AM to 10 PM
+  log(`start : run schedule ${schedule}`);
+  
+  nodeSchedule.scheduleJob(schedule, function () {
+    try {
+      getCurrentTime();
+      main();
+    } catch (error) {
+      log(error);
+      log("---------------------------------------------------------------");
     }
-  })
+  });
 }
+
 
 main()
 runJob()

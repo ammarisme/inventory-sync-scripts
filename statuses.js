@@ -6,9 +6,12 @@ class OrderStatuses{
     
     static order_requested = 	"order_requested"
     static order_accepted= 'order_accepted'
+    static delivered= 'delivered'
     static order_confirmed = 	'order_confirmed'
     static customer_cancelled=  'customer_cancelled'
     static seller_cancelled=  'seller_cancelled'
+    static cancelled=  'cancelled'
+
     
     static payment_pending = 	'payment_pending'
     static payment_failed = 	'payment_failed'
@@ -19,7 +22,7 @@ class OrderStatuses{
     static invoice_generated = 	'invoice_generated'
     
     static dispatched = 	'invoice_pending'
-    static shipped = 	'invoice_failed'
+    static shipped = 	'shipped'
     static shipping_denied = 	'invoice_generated'
     
     static completed = 	'completed'
